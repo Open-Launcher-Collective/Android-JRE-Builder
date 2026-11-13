@@ -2372,11 +2372,13 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/share/utilities/elfFile.hpp b/src/hotspot/share/utilities/elfFile.hpp
 --- a/src/hotspot/share/utilities/elfFile.hpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/share/utilities/elfFile.hpp	(date 1794528560418)
-@@ -47,8 +47,10 @@
++++ b/src/hotspot/share/utilities/elfFile.hpp	(date 1794530722679)
+@@ -46,9 +46,11 @@
+ typedef Elf64_Phdr      Elf_Phdr;
  typedef Elf64_Sym       Elf_Sym;
  
- #if !defined(_ALLBSD_SOURCE) || defined(__APPLE__)
+-#if !defined(_ALLBSD_SOURCE) || defined(__APPLE__)
++#if !defined(_ALLBSD_SOURCE) || defined(__APPLE__) || defined(__ANDROID__))
 +#ifndef ELF_ST_TYPE
  #define ELF_ST_TYPE ELF64_ST_TYPE
  #endif
