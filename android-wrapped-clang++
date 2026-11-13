@@ -5,16 +5,17 @@ if [ "$1" = "--version" ]; then
   echo "This is free software; see the source for copying conditions.  There is NO"
   echo "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
 else
-    args=()
-    for arg in "$@"; do
-      case "$arg" in
-        -fno-var-tracking-assignments|-fno-lifetime-dse)
-        # Skip GCC-only flags
-          ;;
-        *)
-          args+=("$arg")
-          ;;
-      esac
-    done
-    exec "$thecxx" -Wno-unknown-warning-option "${args[@]}"Z
+  args=()
+  for arg in "$@"; do
+    case "$arg" in
+      -fno-var-tracking-assignments|-fno-lifetime-dse)
+      # Skip GCC-only flags
+        ;;
+      *)
+        args+=("$arg")
+        ;;
+    esac
+  done
+
+  exec "$thecxx" -Wno-unknown-warning-option "${args[@]}"
 fi

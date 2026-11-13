@@ -17,5 +17,5 @@ else
     esac
   done
 
-  exec "$thecc" -Wno-unknown-warning-option "${args[@]}"Z
+  exec "$thecc" -Wno-unknown-warning-option "${args[@]}"
 fi
