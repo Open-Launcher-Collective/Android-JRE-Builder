@@ -107,9 +107,12 @@ fi
 #   --with-extra-cxxflags="$CXXFLAGS -Dchar16_t=uint16_t -Dchar32_t=uint32_t" \
 #   --with-extra-cflags="$CPPFLAGS" \
 
+
+# FIXME: iOS
 bash ./configure \
     BUILD_CC=/usr/bin/gcc \
     BUILD_CXX=/usr/bin/g++ \
+    --build=x86_64-unknown-linux-gnu \
     --openjdk-target=$TARGET \
     --with-extra-cflags="$CFLAGS" \
     --with-extra-cxxflags="$CFLAGS" \
