@@ -108,6 +108,8 @@ fi
 #   --with-extra-cflags="$CPPFLAGS" \
 
 bash ./configure \
+    BUILD_CC=/usr/bin/gcc \
+    BUILD_CXX=/usr/bin/g++ \
     --openjdk-target=$TARGET \
     --with-extra-cflags="$CFLAGS" \
     --with-extra-cxxflags="$CFLAGS" \
