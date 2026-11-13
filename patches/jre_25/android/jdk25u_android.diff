@@ -303,7 +303,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp
 --- a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(date 1794539089895)
++++ b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(date 1794546473697)
 @@ -33,6 +33,7 @@
  #include "utilities/debug.hpp"
  
@@ -323,6 +323,22 @@ diff --git a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp b/src/hotspot/os/linux/gc
  }
  
  uint32_t ZNUMA::id() {
+@@ -58,6 +63,9 @@
+ }
+ 
+ uint32_t ZNUMA::memory_id(uintptr_t addr) {
++#ifdef __ANDROID__
++  return 0;
++#else
+   if (!_enabled) {
+     // NUMA support not enabled, assume everything belongs to node zero
+     return 0;
+@@ -73,4 +81,5 @@
+   assert(id < _count, "Invalid NUMA id");
+ 
+   return id;
++#endif
+ }
 Index: make/modules/jdk.jdwp.agent/Lib.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
