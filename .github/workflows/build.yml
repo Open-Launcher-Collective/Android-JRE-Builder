@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         arch: ["aarch32", "aarch64", "x86", "x86_64"]
-        # TODO: Patches for: versions: [8, 17, 21, 25]
-        versions: [25]
+        # TODO: Patches for: version: [8, 17, 21, 25]
+        version: [25]
         exclude:
           - arch: aarch32
             version: 25
