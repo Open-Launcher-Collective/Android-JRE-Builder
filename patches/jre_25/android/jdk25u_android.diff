@@ -25,16 +25,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/linux/os_linux.cpp b/src/hotspot/os/linux/os_linux.cpp
 --- a/src/hotspot/os/linux/os_linux.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/os/linux/os_linux.cpp	(date 1794528560293)
-@@ -137,7 +137,7 @@
- 
- #define MAX_PATH    (2 * K)
- 
--#ifdef MUSL_LIBC
-+#if defined(MUSL_LIBC) || defined(__ANDROID__)
- // dlvsym is not a part of POSIX
- // and musl libc doesn't implement it.
- static void *dlvsym(void *handle,
++++ b/src/hotspot/os/linux/os_linux.cpp	(date 1794534290936)
 @@ -215,6 +215,8 @@
  // avoid this
  static bool suppress_primordial_thread_resolution = false;
@@ -86,11 +77,10 @@ diff --git a/src/hotspot/os/linux/os_linux.cpp b/src/hotspot/os/linux/os_linux.c
  
  // check if addr is inside libjvm.so
  bool os::address_is_in_vm(address addr) {
-@@ -1605,6 +1619,30 @@
-   if (offset) *offset = -1;
+@@ -1606,6 +1620,30 @@
    return false;
  }
-+
+ 
 +static bool read_so_path_from_maps(const char* so_name, char* buf, int buflen) {
 +  FILE *fp = fopen("/proc/self/maps", "r");
 +  assert(fp, "Failed to open /proc/self/maps");
@@ -114,9 +104,10 @@ diff --git a/src/hotspot/os/linux/os_linux.cpp b/src/hotspot/os/linux/os_linux.c
 +  fclose(fp);
 +  return false;
 +}
- 
++
  // Remember the stack's state. The Linux dynamic linker will change
  // the stack to 'executable' at most once, so we must safepoint only once.
+ bool os::Linux::_stack_is_executable = false;
 @@ -1998,6 +2036,7 @@
  }
  
@@ -2372,13 +2363,13 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/share/utilities/elfFile.hpp b/src/hotspot/share/utilities/elfFile.hpp
 --- a/src/hotspot/share/utilities/elfFile.hpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/share/utilities/elfFile.hpp	(date 1794531601225)
++++ b/src/hotspot/share/utilities/elfFile.hpp	(date 1794533667426)
 @@ -46,9 +46,11 @@
  typedef Elf64_Phdr      Elf_Phdr;
  typedef Elf64_Sym       Elf_Sym;
  
 -#if !defined(_ALLBSD_SOURCE) || defined(__APPLE__)
-+#if (!defined(_ALLBSD_SOURCE) || defined(__APPLE__)) && !defined(__ANDROID__)
++#if (!defined(_ALLBSD_SOURCE) || defined(__APPLE__))
 +#ifndef ELF_ST_TYPE
  #define ELF_ST_TYPE ELF64_ST_TYPE
  #endif
