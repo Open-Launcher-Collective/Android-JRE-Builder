@@ -43,7 +43,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/linux/os_linux.cpp b/src/hotspot/os/linux/os_linux.cpp
 --- a/src/hotspot/os/linux/os_linux.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/os/linux/os_linux.cpp	(date 1794539174632)
++++ b/src/hotspot/os/linux/os_linux.cpp	(date 1794543974382)
 @@ -215,6 +215,8 @@
  // avoid this
  static bool suppress_primordial_thread_resolution = false;
@@ -195,7 +195,7 @@ diff --git a/src/hotspot/os/linux/os_linux.cpp b/src/hotspot/os/linux/os_linux.c
    }
 -#endif
 -
-+#elifdef __ANDROID__
++#elif defined(__ANDROID__)
 +  return false;
 +#else
    return true;
