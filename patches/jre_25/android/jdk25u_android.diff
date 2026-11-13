@@ -1,5 +1,23 @@
 Subject: [PATCH] jdk25u_android
 ---
+Index: src/hotspot/os/linux/gc/z/zSyscall_linux.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp b/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp
+--- a/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
++++ b/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp	(date 1794539205902)
+@@ -35,5 +35,9 @@
+ }
+ 
+ long ZSyscall::get_mempolicy(int* mode, unsigned long* nodemask, unsigned long maxnode, void* addr, unsigned long flags) {
++#ifdef __ANDROID__
++  return 0;
++#else
+   return syscall(SYS_get_mempolicy, mode, nodemask, maxnode, addr, flags);
++#endif
+ }
 Index: make/modules/java.base/lib/CoreLibraries.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -25,7 +43,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/linux/os_linux.cpp b/src/hotspot/os/linux/os_linux.cpp
 --- a/src/hotspot/os/linux/os_linux.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/os/linux/os_linux.cpp	(date 1794534290936)
++++ b/src/hotspot/os/linux/os_linux.cpp	(date 1794539174632)
 @@ -215,6 +215,8 @@
  // avoid this
  static bool suppress_primordial_thread_resolution = false;
@@ -165,7 +183,27 @@ diff --git a/src/hotspot/os/linux/os_linux.cpp b/src/hotspot/os/linux/os_linux.c
    }
  }
  
-@@ -5167,7 +5225,46 @@
+@@ -3204,14 +3262,16 @@
+   // Especially in dockers, get_mempolicy is not allowed with the default configuration. So it's necessary
+   // to check whether the syscalls are available. Currently, only get_mempolicy is checked since checking
+   // others like mbind would cause unexpected side effects.
+-#ifdef SYS_get_mempolicy
++#if defined(SYS_get_mempolicy) && !defined(__ANDROID__)
+   int dummy = 0;
+   if (syscall(SYS_get_mempolicy, &dummy, nullptr, 0, (void*)&dummy, 3) == -1) {
+     return false;
+   }
+-#endif
+-
++#elifdef __ANDROID__
++  return false;
++#else
+   return true;
++#endif
+ }
+ 
+ bool os::Linux::libnuma_init() {
+@@ -5167,7 +5227,46 @@
  // Linux doesn't yet have a (official) notion of processor sets,
  // so just return the system wide load average.
  int os::loadavg(double loadavg[], int nelem) {
@@ -265,7 +303,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp
 --- a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(date 1794528737739)
++++ b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(date 1794539089895)
 @@ -33,6 +33,7 @@
  #include "utilities/debug.hpp"
  
