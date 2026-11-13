@@ -77,6 +77,7 @@ makeuni
 if [[ $TARGET_VERSION -ne 25 ]]; then
   makearch aarch32 arm
   makearch i386 x86
+fi
 
 makearch aarch64 arm64
 makearch amd64 x86_64
