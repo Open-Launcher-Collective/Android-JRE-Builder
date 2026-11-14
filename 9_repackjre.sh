@@ -39,6 +39,7 @@ makearch () {
   
   # server contains the libjvm.so
   copyjvmlib server $2
+  copyjvmlib server-legacy $2
   copyjvmlib client $2
   
   

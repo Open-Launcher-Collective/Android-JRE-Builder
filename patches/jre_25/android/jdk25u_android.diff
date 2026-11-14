@@ -363,18 +363,22 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp b/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp
 --- a/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp	(date 1794635340740)
-@@ -6708,9 +6708,11 @@
- // On other systems, the helper is a usual C function.
++++ b/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp	(date 1794636341684)
+@@ -6705,12 +6705,17 @@
+ // the call setup code.
+ //
+ // On Linux, aarch64_get_thread_helper() clobbers only r0, r1, and flags.
+-// On other systems, the helper is a usual C function.
++// On other systems, and on Android emulated-TLS builds (ANDROID_EMUTLS),
++// the helper is a usual C function.
  //
  void MacroAssembler::get_thread(Register dst) {
--  RegSet saved_regs =
--    LINUX_ONLY(RegSet::range(r0, r1)  + lr - dst)
--    NOT_LINUX (RegSet::range(r0, r17) + lr - dst);
-+#if defined(LINUX) && !defined(__ANDROID__)
-+  RegSet saved_regs = RegSet::range(r0, r1) + lr - dst;   // asm helper, tlsdesc ABI
++#if defined(__ANDROID__) && defined(ANDROID_EMUTLS)
++  RegSet saved_regs = RegSet::range(r0, r17) + lr - dst;
 +#else
-+  RegSet saved_regs = RegSet::range(r0, r17) + lr - dst;  // C++ helper, full call clobbers
+   RegSet saved_regs =
+     LINUX_ONLY(RegSet::range(r0, r1)  + lr - dst)
+     NOT_LINUX (RegSet::range(r0, r17) + lr - dst);
 +#endif
  
    protect_return_address();
@@ -731,12 +735,12 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os_cpu/linux_aarch64/threadLS_linux_aarch64.S b/src/hotspot/os_cpu/linux_aarch64/threadLS_linux_aarch64.S
 --- a/src/hotspot/os_cpu/linux_aarch64/threadLS_linux_aarch64.S	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/os_cpu/linux_aarch64/threadLS_linux_aarch64.S	(date 1794528560358)
++++ b/src/hotspot/os_cpu/linux_aarch64/threadLS_linux_aarch64.S	(date 1794636341545)
 @@ -22,6 +22,7 @@
  
  #include "defs.S.inc"
  
-+#ifndef __ANDROID__
++#if !(defined(__ANDROID__) && defined(ANDROID_EMUTLS))
          // JavaThread::aarch64_get_thread_helper()
          //
          // Return the current thread pointer in x0.
@@ -755,15 +759,26 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os_cpu/linux_aarch64/javaThread_linux_aarch64.hpp b/src/hotspot/os_cpu/linux_aarch64/javaThread_linux_aarch64.hpp
 --- a/src/hotspot/os_cpu/linux_aarch64/javaThread_linux_aarch64.hpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/os_cpu/linux_aarch64/javaThread_linux_aarch64.hpp	(date 1794528560346)
-@@ -47,6 +47,8 @@
++++ b/src/hotspot/os_cpu/linux_aarch64/javaThread_linux_aarch64.hpp	(date 1794636341405)
+@@ -47,6 +47,20 @@
    bool pd_get_top_frame(frame* fr_addr, void* ucontext, bool isInJava);
  public:
  
--  static Thread *aarch64_get_thread_helper();
++#if defined(__ANDROID__) && !defined(ANDROID_EMUTLS) && __ANDROID_API__ < 29
++#error "Native-TLS libjvm must be built for API >= 29 (or define ANDROID_EMUTLS)"
++#endif
++
++#if defined(__ANDROID__) && defined(ANDROID_EMUTLS)
++  // Android API < 29 rejects libraries with a PT_TLS segment, so this build
++  // uses emulated TLS and cannot use the TLSDESC helper in
++  // threadLS_linux_aarch64.S. This is an ordinary C++ function that may
++  // clobber r0-r17; MacroAssembler::get_thread() saves accordingly.
 +  static Thread *aarch64_get_thread_helper() {
 +    return Thread::current();
 +  }
++#else
+   static Thread *aarch64_get_thread_helper();
++#endif
  
  #endif // OS_CPU_LINUX_AARCH64_JAVATHREAD_LINUX_AARCH64_HPP
 Index: make/common/Modules.gmk
@@ -2001,27 +2016,66 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/native/libjli/java_md.c
 --- a/src/java.base/unix/native/libjli/java_md.c	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/java.base/unix/native/libjli/java_md.c	(date 1794528560489)
-@@ -576,7 +576,58 @@
++++ b/src/java.base/unix/native/libjli/java_md.c	(date 1794637025783)
+@@ -448,12 +448,46 @@
+ }
+ 
+ 
++#ifdef __ANDROID__
++#include <sys/system_properties.h>
++
++static int
++AndroidDeviceApiLevel(void)
++{
++    char v[PROP_VALUE_MAX] = {0};
++    return __system_property_get("ro.build.version.sdk", v) > 0 ? atoi(v) : 0;
++}
++
++static const char *
++AndroidSelectJvmType(const char *jdkroot, const char *jvmtype)
++{
++    char legacy[PATH_MAX + 1];
++    struct stat s;
++    const char *force = getenv("JDK_ANDROID_FORCE_LEGACY_JVM");
++    int api = AndroidDeviceApiLevel();
++
++    if (JLI_StrCmp(jvmtype, "server") == 0 &&
++        ((force != NULL && force[0] == '1') || api < 29)) {
++        JLI_Snprintf(legacy, sizeof(legacy), "%s/lib/server-legacy/" JVM_DLL, jdkroot);
++        if (stat(legacy, &s) == 0) {
++            jvmtype = "server-legacy";
++        }
++    }
++    JLI_TraceLauncher("Android API %d -> jvmtype %s\n", api, jvmtype);
++    return jvmtype;
++}
++#endif
++
+ static jboolean
+ GetJVMPath(const char *jdkroot, const char *jvmtype,
+            char *jvmpath, jint jvmpathsize)
+ {
+     struct stat s;
+ 
++#ifdef __ANDROID__
++    jvmtype = AndroidSelectJvmType(jdkroot, jvmtype);
++#endif
++
+     if (JLI_StrChr(jvmtype, '/')) {
+         JLI_Snprintf(jvmpath, jvmpathsize, "%s/" JVM_DLL, jvmtype);
+     } else {
+@@ -576,7 +610,46 @@
  SetExecname(char **argv)
  {
      char* exec_path = NULL;
 -#if defined(__linux__)
-+#if defined(__ANDROID__) //Since both __ANDROID__ and __linux__ are defined, we must let the preprocessor preprocess the __ANDRIOD__ part first
++#if defined(__ANDROID__)
 +    char *__java_home = getenv("JAVA_HOME");
-+    // From http://hg.openjdk.java.net/mobile/jdk9/jdk/file/17bb8a98d5e3/src/java.base/unix/native/libjli/java_md_solinux.c#l844
-+        /* For Android, 'self' would point to /system/bin/app_process
-+         * since we are really executing a Dalvik program at this point.
-+         * argv[0] points to the Dalvik application name and we set the
-+         * path to __java_home.
-+         */
 +        char buf[PATH_MAX+1];
 +        char *p = NULL;
 +        if ((p = JLI_StrRChr(argv[0], '/')) != 0) {
-+          /* may be running from command line */
 +          p++;
 +          if ((JLI_StrLen(p) == 4) && JLI_StrCmp(p, "java") == 0) {
-+            /* started as 'java'. Must be command line */
 +            JLI_TraceLauncher("SetExecName maybe command line = %s\n", argv[0]);
 +            if (*argv[0] != '/') {
 +              char *curdir = NULL;
@@ -2034,24 +2088,20 @@ diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/nat
 +              JLI_Snprintf(buf, PATH_MAX, "%s", argv[0]);
 +            }
 +          } else {
-+            /* Not command line, see if __java_home set */
 +            if (__java_home != NULL) {
 +              JLI_TraceLauncher("SetExecName not java = %s\n", __java_home);
 +              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
 +            } else {
-+              /* Fake it as best we can or should we punt? */
 +              JLI_TraceLauncher("SetExecName fake it = %s\n", argv[0]);
 +              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
 +                           argv[0]);
 +            }
 +          }
 +        } else {
-+            /* Not started as 'java', see if __java_home set */
 +            if (__java_home != NULL) {
 +              JLI_TraceLauncher("SetExecName not command line = %s\n", __java_home);
 +              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
 +            } else {
-+              /* Fake it as best we can or should we punt? */
 +              JLI_TraceLauncher("SetExecName fake it 2 = %s\n", argv[0]);
 +              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
 +                           argv[0]);
@@ -2062,7 +2112,7 @@ diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/nat
      {
          const char* self = "/proc/self/exe";
          char buf[PATH_MAX+1];
-@@ -586,10 +637,6 @@
+@@ -586,10 +659,6 @@
              exec_path = JLI_StringDup(buf);
          }
      }
@@ -2762,7 +2812,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/java.instrument/unix/native/libinstrument/EncodingSupport_md.c b/src/java.instrument/unix/native/libinstrument/EncodingSupport_md.c
 --- a/src/java.instrument/unix/native/libinstrument/EncodingSupport_md.c	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/java.instrument/unix/native/libinstrument/EncodingSupport_md.c	(date 1794528560616)
++++ b/src/java.instrument/unix/native/libinstrument/EncodingSupport_md.c	(date 1794636402870)
 @@ -65,7 +65,11 @@
      (void)setlocale(LC_ALL, "");
  
@@ -2770,7 +2820,7 @@ diff --git a/src/java.instrument/unix/native/libinstrument/EncodingSupport_md.c 
 +#ifndef __ANDROID__
      codeset = (char*)nl_langinfo(CODESET);
 +#else
-+    codeset = "ASCII"; // (MB_CUR_MAX == 1) ? "ASCII" : "UTF-8";
++    codeset = "UTF-8"; // (MB_CUR_MAX == 1) ? "ASCII" : "UTF-8";
 +#endif
      if ( codeset == NULL || codeset[0] == 0 ) {
          UTF_DEBUG(("NO codeset returned by nl_langinfo(CODESET)\n"));

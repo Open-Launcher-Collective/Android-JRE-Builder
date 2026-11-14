@@ -92,4 +92,10 @@ export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
 export STRIP=$TOOLCHAIN/bin/llvm-strip
 
 export TARGET_OS=android
+
+if [[ "$TARGET_JDK" == "aarch64" ]]; then
+  export ANDROID_DUAL_LIBJVM=1
+  export ANDROID_TLS_API=29
+  export ANDROID_TLS_CONF_NAME=${JVM_PLATFORM}-${TARGET_JDK}-${JVM_VARIANTS}-${JDK_DEBUG_LEVEL}-tls
+fi
 fi

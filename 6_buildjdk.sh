@@ -103,34 +103,47 @@ fi
 #   --with-extra-cflags="$CPPFLAGS" \
 
 
-# FIXME: iOS
-bash ./configure \
-    BUILD_CC=/usr/bin/gcc \
-    BUILD_CXX=/usr/bin/g++ \
-    --build=x86_64-unknown-linux-gnu \
-    --openjdk-target=$TARGET \
-    --with-extra-cflags="$CFLAGS" \
-    --with-extra-cxxflags="$CFLAGS" \
-    --with-extra-ldflags="$LDFLAGS" \
-    --disable-precompiled-headers \
-    --disable-warnings-as-errors \
-    --enable-option-checking=fatal \
-    --enable-headless-only=yes \
-    --with-jvm-variants=$JVM_VARIANTS \
-    --with-jvm-features=-dtrace,-zero,-vm-structs,-epsilongc \
-    --with-cups-include=$CUPS_DIR \
-    --with-devkit=$TOOLCHAIN \
-    --with-native-debug-symbols=external \
-    --with-debug-level=$JDK_DEBUG_LEVEL \
-    --with-fontconfig-include=$ANDROID_INCLUDE \
-    $AUTOCONF_x11arg $AUTOCONF_EXTRA_ARGS \
-    --x-libraries=/usr/lib \
-        $platform_args || \
-error_code=$?
-if [[ "$error_code" -ne 0 ]]; then
-  echo "\n\nCONFIGURE ERROR $error_code , config.log:"
-  cat config.log
-  exit $error_code
+# Same options for every build dir; only the TLS/API-level flags differ.
+# Usage: run_configure "<extra C/C++ flags>" [configure args...]
+run_configure() {
+  local tls_cflags="$1"
+  shift
+  local error_code=0
+  # FIXME: iOS
+  bash ./configure \
+      BUILD_CC=/usr/bin/gcc \
+      BUILD_CXX=/usr/bin/g++ \
+      --build=x86_64-unknown-linux-gnu \
+      --openjdk-target=$TARGET \
+      --with-extra-cflags="$CFLAGS $tls_cflags" \
+      --with-extra-cxxflags="$CFLAGS $tls_cflags" \
+      --with-extra-ldflags="$LDFLAGS" \
+      --disable-precompiled-headers \
+      --disable-warnings-as-errors \
+      --enable-option-checking=fatal \
+      --enable-headless-only=yes \
+      --with-jvm-variants=$JVM_VARIANTS \
+      --with-jvm-features=-dtrace,-zero,-vm-structs,-epsilongc \
+      --with-cups-include=$CUPS_DIR \
+      --with-devkit=$TOOLCHAIN \
+      --with-native-debug-symbols=external \
+      --with-debug-level=$JDK_DEBUG_LEVEL \
+      --with-fontconfig-include=$ANDROID_INCLUDE \
+      $AUTOCONF_x11arg $AUTOCONF_EXTRA_ARGS \
+      --x-libraries=/usr/lib \
+          $platform_args "$@" || \
+  error_code=$?
+  if [[ "$error_code" -ne 0 ]]; then
+    echo "\n\nCONFIGURE ERROR $error_code , config.log:"
+    cat config.log
+    exit $error_code
+  fi
+}
+
+if [[ "$ANDROID_DUAL_LIBJVM" == "1" ]]; then
+  run_configure "-DANDROID_EMUTLS -femulated-tls"
+else
+  run_configure ""
 fi
 
 jobs=4
@@ -155,4 +168,14 @@ error_code=$?
 if [[ "$error_code" -ne 0 ]]; then
   echo "Build failure, exited with code $error_code. Trying again."
   make JOBS=$jobs images
+fi
+cd ../..
+
+if [[ "$ANDROID_DUAL_LIBJVM" == "1" ]]; then
+  (
+    export thecc=$TOOLCHAIN/bin/${TARGET}${ANDROID_TLS_API}-clang
+    export thecxx=$TOOLCHAIN/bin/${TARGET}${ANDROID_TLS_API}-clang++
+    run_configure "-fno-emulated-tls" --with-conf-name=$ANDROID_TLS_CONF_NAME
+    make -C build/$ANDROID_TLS_CONF_NAME JOBS=$jobs hotspot
+  )
 fi

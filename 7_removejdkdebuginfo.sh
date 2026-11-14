@@ -48,6 +48,28 @@ if [[ "$BUILD_IOS" != "1" ]]; then
    cp freetype-$BUILD_FREETYPE_VERSION/build_android-$TARGET_SHORT/lib/libfreetype.so jreout/lib/
 fi
 
+if [[ "$ANDROID_DUAL_LIBJVM" == "1" ]]; then
+  tls_server=openjdk-${TARGET_VERSION}/build/${ANDROID_TLS_CONF_NAME}/support/modules_libs/java.base/server
+  for out in jdkout jreout; do
+    rm -rf $out/lib/server-legacy
+    mv $out/lib/server $out/lib/server-legacy
+    mkdir $out/lib/server
+    cp -a $tls_server/. $out/lib/server/
+    if [[ ! -e $out/lib/server/libjsig.so && -L $out/lib/server-legacy/libjsig.so ]]; then
+      cp -P $out/lib/server-legacy/libjsig.so $out/lib/server/
+    fi
+    # CDS archives are tied to one exact libjvm; generate them on device.
+    find $out/lib/server $out/lib/server-legacy -name '*.jsa' -delete
+  done
+  # jlink dropped debuginfo files from jreout; keep it that way.
+  find jreout/lib/server -name '*.debuginfo' -delete
+  bash check_libjvm_tls.sh emutls jdkout/lib/server-legacy/libjvm.so
+  bash check_libjvm_tls.sh tls jdkout/lib/server/libjvm.so
+  # Both are libjvm.debuginfo; keep the legacy one apart in dizout.
+  mkdir -p dizout/server-legacy
+  find jdkout/lib/server-legacy -name '*.debuginfo' -exec mv {} dizout/server-legacy/ \;
+fi
+
 # mv jreout/lib/${TARGET_JDK}/libfontmanager.diz jreout/lib/${TARGET_JDK}/libfontmanager.diz.keep
 # find jreout -name "*.debuginfo" | xargs -- rm
 # mv jreout/lib/${TARGET_JDK}/libfontmanager.diz.keep jreout/lib/${TARGET_JDK}/libfontmanager.diz
