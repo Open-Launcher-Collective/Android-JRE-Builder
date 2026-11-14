@@ -45,7 +45,7 @@ if [[ "$BUILD_IOS" != "1" ]]; then
 
   AUTOCONF_x11arg="--x-includes=$ANDROID_INCLUDE/X11"
 
-  export CFLAGS+=" -mllvm -polly -DANDROID -Wno-error=implicit-function-declaration -Wno-error=int-conversion -DR18_RESERVED"
+  export CFLAGS+=" -mllvm -polly -DANDROID -Wno-error=implicit-function-declaration -Wno-error=int-conversion"
   export LDFLAGS+=" -L$PWD/dummy_libs -Wl,--undefined-version"
 
 # Create dummy libraries so we won't have to remove them in OpenJDK makefiles
