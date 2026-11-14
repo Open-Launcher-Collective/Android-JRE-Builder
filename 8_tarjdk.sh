@@ -25,8 +25,8 @@ exit 1
 ' sh {} \; -print
 }
 
-findexec jreout | xargs -- ./termux-elf-cleaner/build/termux-elf-cleaner
-findexec jdkout | xargs -- ./termux-elf-cleaner/build/termux-elf-cleaner
+findexec jreout | xargs -- ./termux-elf-cleaner/build/termux-elf-cleaner --api-level ${API}
+findexec jdkout | xargs -- ./termux-elf-cleaner/build/termux-elf-cleaner --api-level ${API}
 
 fi
 
