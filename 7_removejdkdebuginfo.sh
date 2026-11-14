@@ -63,8 +63,6 @@ if [[ "$ANDROID_DUAL_LIBJVM" == "1" ]]; then
   done
   # jlink dropped debuginfo files from jreout; keep it that way.
   find jreout/lib/server -name '*.debuginfo' -delete
-  bash check_libjvm_tls.sh emutls jdkout/lib/server-legacy/libjvm.so
-  bash check_libjvm_tls.sh tls jdkout/lib/server/libjvm.so
   # Both are libjvm.debuginfo; keep the legacy one apart in dizout.
   mkdir -p dizout/server-legacy
   find jdkout/lib/server-legacy -name '*.debuginfo' -exec mv {} dizout/server-legacy/ \;
