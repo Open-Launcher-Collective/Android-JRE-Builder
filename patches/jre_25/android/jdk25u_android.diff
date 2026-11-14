@@ -356,6 +356,29 @@ diff --git a/make/modules/jdk.jdwp.agent/Lib.gmk b/make/modules/jdk.jdwp.agent/L
      CFLAGS := -DJDWP_LOGGING $(ICONV_CFLAGS), \
      DISABLED_WARNINGS_gcc_eventFilter.c := unused-variable, \
      DISABLED_WARNINGS_gcc_SDE.c := unused-function, \
+Index: src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp b/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp
+--- a/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
++++ b/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp	(date 1794635340740)
+@@ -6708,9 +6708,11 @@
+ // On other systems, the helper is a usual C function.
+ //
+ void MacroAssembler::get_thread(Register dst) {
+-  RegSet saved_regs =
+-    LINUX_ONLY(RegSet::range(r0, r1)  + lr - dst)
+-    NOT_LINUX (RegSet::range(r0, r17) + lr - dst);
++#if defined(LINUX) && !defined(__ANDROID__)
++  RegSet saved_regs = RegSet::range(r0, r1) + lr - dst;   // asm helper, tlsdesc ABI
++#else
++  RegSet saved_regs = RegSet::range(r0, r17) + lr - dst;  // C++ helper, full call clobbers
++#endif
+ 
+   protect_return_address();
+   push(saved_regs, sp);
 Index: src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP

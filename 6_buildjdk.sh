@@ -37,11 +37,6 @@ if [[ "$BUILD_IOS" != "1" ]]; then
     --with-freetype-lib=$FREETYPE_DIR/lib \
     "
 
-  if [[ $TARGET_VERSION -eq 21 ]]; then
-    platform_args+="--build=x86_64-unknown-linux-gnu \
-    "
-  fi
-
   platform_args+="OBJCOPY=${OBJCOPY} \
     RANLIB=${RANLIB} \
     AR=${AR} \
@@ -50,7 +45,7 @@ if [[ "$BUILD_IOS" != "1" ]]; then
 
   AUTOCONF_x11arg="--x-includes=$ANDROID_INCLUDE/X11"
 
-  export CFLAGS+=" -mllvm -polly -DANDROID -Wno-error=implicit-function-declaration -Wno-error=int-conversion"
+  export CFLAGS+=" -mllvm -polly -DANDROID -Wno-error=implicit-function-declaration -Wno-error=int-conversion -DR18_RESERVED"
   export LDFLAGS+=" -L$PWD/dummy_libs -Wl,--undefined-version"
 
 # Create dummy libraries so we won't have to remove them in OpenJDK makefiles
