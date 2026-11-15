@@ -2494,7 +2494,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/make/autoconf/build-aux/config.sub b/make/autoconf/build-aux/config.sub
 --- a/make/autoconf/build-aux/config.sub	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/autoconf/build-aux/config.sub	(date 1794731864131)
++++ b/make/autoconf/build-aux/config.sub	(date 1794732135325)
 @@ -47,7 +47,7 @@
  fi
  
@@ -2508,7 +2508,7 @@ diff --git a/make/autoconf/build-aux/config.sub b/make/autoconf/build-aux/config
      case $1 in
          -- )   # Stop option processing
              shift; break ;;
-+        aarch64-* )
++        *-android* )
 +            echo $1
 +            exit
 +            ;;
