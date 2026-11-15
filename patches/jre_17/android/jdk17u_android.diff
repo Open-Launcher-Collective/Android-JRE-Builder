@@ -2494,7 +2494,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/make/autoconf/build-aux/config.sub b/make/autoconf/build-aux/config.sub
 --- a/make/autoconf/build-aux/config.sub	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/autoconf/build-aux/config.sub	(date 1794731619714)
++++ b/make/autoconf/build-aux/config.sub	(date 1794731864131)
 @@ -47,7 +47,7 @@
  fi
  
@@ -2504,6 +2504,17 @@ diff --git a/make/autoconf/build-aux/config.sub b/make/autoconf/build-aux/config
      . $DIR/autoconf-config.sub "$@"
      # autoconf-config.sub exits, so we never reach here, but just in
      # case we do:
+@@ -58,6 +58,10 @@
+     case $1 in
+         -- )   # Stop option processing
+             shift; break ;;
++        aarch64-* )
++            echo $1
++            exit
++            ;;
+         aarch64-* )
+             config=`echo $1 | sed 's/^aarch64-/arm-/'`
+             sub_args="$sub_args $config"
 Index: make/hotspot/gensrc/GensrcAdlc.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
