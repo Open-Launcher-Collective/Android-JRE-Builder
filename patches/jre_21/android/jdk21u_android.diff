@@ -587,6 +587,22 @@ diff --git a/src/hotspot/os/linux/os_perf_linux.cpp b/src/hotspot/os/linux/os_pe
  /**
     /proc/[number]/stat
                Status information about the process.  This is used by ps(1).  It is defined in /usr/src/linux/fs/proc/array.c.
+Index: make/modules/java.instrument/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/java.instrument/Lib.gmk b/make/modules/java.instrument/Lib.gmk
+--- a/make/modules/java.instrument/Lib.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/modules/java.instrument/Lib.gmk	(date 1794786566341)
+@@ -36,6 +36,7 @@
+ $(eval $(call SetupJdkLibrary, BUILD_LIBINSTRUMENT, \
+     NAME := instrument, \
+     OPTIMIZATION := LOW, \
++    EXTRA_SRC := java.base:libtinyiconv, \
+     CFLAGS := $(CFLAGS_JDKLIB) $(LIBINSTRUMENT_CFLAGS), \
+     CFLAGS_debug := -DJPLIS_LOGGING, \
+     CFLAGS_release := -DNO_JPLIS_LOGGING, \
 Index: make/common/JdkNativeCompilation.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -755,6 +771,25 @@ diff --git a/src/java.base/unix/native/libnet/net_util_md.h b/src/java.base/unix
  /************************************************************************
   * Macros and constants
   */
+Index: make/modules/java.base/lib/CoreLibraries.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/java.base/lib/CoreLibraries.gmk b/make/modules/java.base/lib/CoreLibraries.gmk
+--- a/make/modules/java.base/lib/CoreLibraries.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/modules/java.base/lib/CoreLibraries.gmk	(date 1794786536299)
+@@ -80,7 +80,9 @@
+ 
+ $(BUILD_LIBJAVA): $(BUILD_LIBVERIFY)
+ 
+-
++ifeq ($(OPENJDK_TARGET_OS), linux)
++  $(BUILD_LIBJAVA): $(BUILD_LIBTINYICONV)
++endif
+ ##########################################################################################
+ 
+ BUILD_LIBZIP_EXCLUDES :=
 Index: src/hotspot/os/linux/gc/z/zSyscall_linux.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2425,6 +2460,22 @@ diff --git a/src/hotspot/os_cpu/linux_arm/linux_arm_32.S b/src/hotspot/os_cpu/li
          beq     conjoint_longs_finish
          cmp     r2, #16
  	blt	cl_b2f_copy_8
+Index: make/modules/jdk.jdwp.agent/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/jdk.jdwp.agent/Lib.gmk b/make/modules/jdk.jdwp.agent/Lib.gmk
+--- a/make/modules/jdk.jdwp.agent/Lib.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/modules/jdk.jdwp.agent/Lib.gmk	(date 1794786487853)
+@@ -53,6 +53,7 @@
+     NAME := jdwp, \
+     OPTIMIZATION := LOW, \
+     CFLAGS := $(CFLAGS_JDKLIB) -DJDWP_LOGGING, \
++    EXTRA_SRC := java.base:libtinyiconv, \
+     DISABLED_WARNINGS_gcc_SDE.c := unused-function, \
+     DISABLED_WARNINGS_clang_error_messages.c := format-nonliteral, \
+     DISABLED_WARNINGS_clang_EventRequestImpl.c := self-assign, \
 Index: make/modules/java.desktop/Lib.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
