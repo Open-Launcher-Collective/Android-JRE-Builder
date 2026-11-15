@@ -2487,6 +2487,23 @@ diff --git a/src/hotspot/cpu/arm/icache_arm.cpp b/src/hotspot/cpu/arm/icache_arm
    return magic;
  }
  
+Index: make/autoconf/build-aux/config.sub
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/autoconf/build-aux/config.sub b/make/autoconf/build-aux/config.sub
+--- a/make/autoconf/build-aux/config.sub	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/autoconf/build-aux/config.sub	(date 1794731619714)
+@@ -47,7 +47,7 @@
+ fi
+ 
+ # Filter out everything that doesn't begin with "aarch64-"
+-if ! echo $* | grep '^aarch64-' >/dev/null ; then
++if ! echo $* | egrep "^aarch64-|-android" >/dev/null ; then
+     . $DIR/autoconf-config.sub "$@"
+     # autoconf-config.sub exits, so we never reach here, but just in
+     # case we do:
 Index: make/hotspot/gensrc/GensrcAdlc.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
