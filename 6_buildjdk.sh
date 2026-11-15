@@ -105,6 +105,12 @@ fi
 
 # Same options for every build dir; only the TLS/API-level flags differ.
 # Usage: run_configure "<extra C/C++ flags>" [configure args...]
+if [[ $TARGET_VERSION -ne 17 ]]; then
+    export AUTOCONF_BUILD_SYSTEM=--build=x86_64-unknown-linux-gnu
+else
+    export AUTOCONF_BUILD_SYSTEM=
+fi
+
 run_configure() {
   local tls_cflags="$1"
   shift
@@ -113,7 +119,6 @@ run_configure() {
   bash ./configure \
       BUILD_CC=/usr/bin/gcc \
       BUILD_CXX=/usr/bin/g++ \
-      --build=x86_64-unknown-linux-gnu \
       --openjdk-target=$TARGET \
       --with-extra-cflags="$CFLAGS $tls_cflags" \
       --with-extra-cxxflags="$CFLAGS $tls_cflags" \
@@ -129,6 +134,7 @@ run_configure() {
       --with-native-debug-symbols=external \
       --with-debug-level=$JDK_DEBUG_LEVEL \
       --with-fontconfig-include=$ANDROID_INCLUDE \
+      $AUTOCONF_BUILD_SYSTEM \
       $AUTOCONF_x11arg $AUTOCONF_EXTRA_ARGS \
       --x-libraries=/usr/lib \
           $platform_args "$@" || \
