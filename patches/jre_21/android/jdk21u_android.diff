@@ -26,7 +26,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/native/libjli/java_md.c
 --- a/src/java.base/unix/native/libjli/java_md.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/java.base/unix/native/libjli/java_md.c	(date 1794729236224)
++++ b/src/java.base/unix/native/libjli/java_md.c	(date 1794735013256)
 @@ -463,12 +463,46 @@
  }
  
@@ -68,7 +68,7 @@ diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/nat
      struct stat s;
  
 +#ifdef __ANDROID__
-+    jvmtype = AndroidSelectJvmType(jdkroot, jvmtype);
++    jvmtype = AndroidSelectJvmType(jrepath, jvmtype);
 +#endif
 +
      if (JLI_StrChr(jvmtype, '/')) {
