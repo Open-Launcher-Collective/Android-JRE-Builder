@@ -481,6 +481,36 @@ diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.c
  }
  
  static void print_rlimit(outputStream* st, const char* msg,
+Index: src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp b/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp
+--- a/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp	(date 1794788825547)
+@@ -47,6 +47,20 @@
+   bool pd_get_top_frame(frame* fr_addr, void* ucontext, bool isInJava);
+ public:
+ 
+-  static Thread *aarch64_get_thread_helper();
++#if defined(__ANDROID__) && !defined(ANDROID_EMUTLS) && __ANDROID_API__ < 29
++#error "Native-TLS libjvm must be built for API >= 29 (or define ANDROID_EMUTLS)"
++#endif
++
++#if defined(__ANDROID__) && defined(ANDROID_EMUTLS)
++// Android API < 29 rejects libraries with a PT_TLS segment, so this build
++// uses emulated TLS and cannot use the TLSDESC helper in
++// threadLS_linux_aarch64.S. This is an ordinary C++ function that may
++// clobber r0-r17; MacroAssembler::get_thread() saves accordingly.
++static Thread *aarch64_get_thread_helper() {
++  return Thread::current();
++}
++#else
++static Thread *aarch64_get_thread_helper();
++#endif
+ 
+ #endif // OS_CPU_LINUX_AARCH64_THREAD_LINUX_AARCH64_HPP
 Index: src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
