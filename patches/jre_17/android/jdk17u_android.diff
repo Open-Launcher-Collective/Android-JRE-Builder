@@ -68,23 +68,6 @@ diff --git a/src/hotspot/os_cpu/linux_arm/os_linux_arm.cpp b/src/hotspot/os_cpu/
      : /* no output */ : /* no input */ : "r0"
    );
  #endif
-Index: make/modules/java.desktop/Lib.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/modules/java.desktop/Lib.gmk b/make/modules/java.desktop/Lib.gmk
---- a/make/modules/java.desktop/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/modules/java.desktop/Lib.gmk	(date 1794729749825)
-@@ -76,7 +76,7 @@
- 
-   $(BUILD_LIBJSOUND): $(call FindLib, java.base, java)
- 
--  TARGETS += $(BUILD_LIBJSOUND)
-+  # TARGETS += $(BUILD_LIBJSOUND)
- 
- endif
- 
 Index: src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -104,6 +87,659 @@ diff --git a/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.ja
              String line;
              while ((line = in.readLine()) != null) {
                  int maxvalues = maxperkeyword;
+Index: src/hotspot/os_cpu/linux_arm/linux_arm_32.S
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/os_cpu/linux_arm/linux_arm_32.S b/src/hotspot/os_cpu/linux_arm/linux_arm_32.S
+--- a/src/hotspot/os_cpu/linux_arm/linux_arm_32.S	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/hotspot/os_cpu/linux_arm/linux_arm_32.S	(date 1794730015577)
+@@ -94,7 +94,7 @@
+         stmia to!, {r3 - r9, ip}
+         bgt     dw_f2b_loop_32
+ dw_f2b_loop_32_finish:
+-        addlts  r2, #32
++        addslt  r2, #32
+         beq     disjoint_words_finish
+         cmp     r2, #16
+ 	blt	disjoint_words_small
+@@ -142,7 +142,7 @@
+         stmia to!, {r3 - r9, ip}
+         bgt     cw_f2b_loop_32
+ cw_f2b_loop_32_finish:
+-        addlts  r2, #32
++        addslt  r2, #32
+         beq     conjoint_words_finish
+         cmp     r2, #16
+ 	blt	conjoint_words_small
+@@ -175,7 +175,7 @@
+         stmdb to!, {r3-r9,ip}
+         bgt     cw_b2f_loop_32
+ cw_b2f_loop_32_finish:
+-        addlts  r2, #32
++        addslt  r2, #32
+         beq     conjoint_words_finish
+         cmp     r2, #16
+ 	blt	cw_b2f_copy_small
+@@ -227,7 +227,7 @@
+         stmia to!, {r3 - r9, ip}
+         bgt     cs_f2b_loop_32
+ cs_f2b_loop_32_finish:
+-        addlts  r2, #32
++        addslt  r2, #32
+         beq     conjoint_shorts_finish
+         movs    r6, r2, lsr #3
+         .align 3
+@@ -243,11 +243,11 @@
+         beq     conjoint_shorts_finish
+         cmp     r2, #4
+         ldrh    r3, [from], #2
+-        ldrgeh  r4, [from], #2
+-        ldrgth  r5, [from], #2
++        ldrhge  r4, [from], #2
++        ldrhgt  r5, [from], #2
+         strh    r3, [to], #2
+-        strgeh  r4, [to], #2
+-        strgth  r5, [to], #2
++        strhge  r4, [to], #2
++        strhgt  r5, [to], #2
+         b       conjoint_shorts_finish
+ 
+ 	# Destination not aligned
+@@ -305,11 +305,11 @@
+         beq     conjoint_shorts_finish
+         cmp     r2, #4
+         ldrh    r3, [from], #2
+-        ldrgeh  r4, [from], #2
+-        ldrgth  r5, [from], #2
++        ldrhge  r4, [from], #2
++        ldrhgt  r5, [from], #2
+         strh    r3, [to], #2
+-        strgeh  r4, [to], #2
+-        strgth  r5, [to], #2
++        strhge  r4, [to], #2
++        strhgt  r5, [to], #2
+         b       conjoint_shorts_finish
+ 
+ 	# Src and dest overlap, copy in a descending order
+@@ -332,7 +332,7 @@
+         stmdb to!, {r3-r9,ip}
+         bgt     cs_b2f_loop_32
+ cs_b2f_loop_32_finish:
+-        addlts  r2, #32
++        addslt  r2, #32
+         beq     conjoint_shorts_finish
+         cmp     r2, #24
+         blt     cs_b2f_16
+@@ -358,11 +358,11 @@
+ cs_b2f_all_copy:
+         cmp     r2, #4
+         ldrh    r3, [from, #-2]!
+-        ldrgeh  r4, [from, #-2]!
+-        ldrgth  r5, [from, #-2]!
++        ldrhge  r4, [from, #-2]!
++        ldrhgt  r5, [from, #-2]!
+         strh    r3, [to, #-2]!
+-        strgeh  r4, [to, #-2]!
+-        strgth  r5, [to, #-2]!
++        strhge  r4, [to, #-2]!
++        strhgt  r5, [to, #-2]!
+         b       conjoint_shorts_finish
+ 
+ 	# Destination not aligned
+@@ -397,7 +397,7 @@
+         bgt     cs_b2f_16_loop_u
+         beq     conjoint_shorts_finish
+ cs_b2f_16_loop_u_finished:
+-        addlts  r2, #16
++        addslt  r2, #16
+         ldr     r3, [from]
+ 	cmp     r2, #10
+         blt     cs_b2f_2_u_loop
+@@ -460,7 +460,7 @@
+         stmia to!, {r3 - r9, ip}
+         bgt     cl_f2b_loop_32
+ cl_f2b_loop_32_finish:
+-        addlts  r2, #32
++        addslt  r2, #32
+         beq     conjoint_longs_finish
+ conjoint_longs_small:
+         cmp     r2, #16
+@@ -493,7 +493,7 @@
+         stmdb 	to!, {r3 - r9, ip}
+         bgt     cl_b2f_loop_32
+ cl_b2f_loop_32_finish:
+-        addlts  r2, #32
++        addslt  r2, #32
+         beq     conjoint_longs_finish
+         cmp     r2, #16
+ 	blt	cl_b2f_copy_8
+Index: src/hotspot/os/posix/os_posix.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.cpp
+--- a/src/hotspot/os/posix/os_posix.cpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794730015506)
+@@ -65,7 +65,9 @@
+ #include <sys/wait.h>
+ #include <time.h>
+ #include <unistd.h>
++#ifndef __ANDROID__
+ #include <utmpx.h>
++#endif
+ 
+ #ifdef __APPLE__
+   #include <crt_externs.h>
+@@ -418,6 +420,7 @@
+ // unfortunately it does not work on macOS and Linux because the utx chain has no entry
+ // for reboot at least on my test machines
+ void os::Posix::print_uptime_info(outputStream* st) {
++#ifndef __ANDROID__
+   int bootsec = -1;
+   int currsec = time(NULL);
+   struct utmpx* ent;
+@@ -432,6 +435,7 @@
+   if (bootsec != -1) {
+     os::print_dhm(st, "OS uptime:", (long) (currsec-bootsec));
+   }
++#endif
+ }
+ 
+ static void print_rlimit(outputStream* st, const char* msg,
+Index: src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp b/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp
+--- a/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp	(date 1794788825547)
+@@ -47,6 +47,20 @@
+   bool pd_get_top_frame(frame* fr_addr, void* ucontext, bool isInJava);
+ public:
+ 
+-  static Thread *aarch64_get_thread_helper();
++#if defined(__ANDROID__) && !defined(ANDROID_EMUTLS) && __ANDROID_API__ < 29
++#error "Native-TLS libjvm must be built for API >= 29 (or define ANDROID_EMUTLS)"
++#endif
++
++#if defined(__ANDROID__) && defined(ANDROID_EMUTLS)
++// Android API < 29 rejects libraries with a PT_TLS segment, so this build
++// uses emulated TLS and cannot use the TLSDESC helper in
++// threadLS_linux_aarch64.S. This is an ordinary C++ function that may
++// clobber r0-r17; MacroAssembler::get_thread() saves accordingly.
++static Thread *aarch64_get_thread_helper() {
++  return Thread::current();
++}
++#else
++static Thread *aarch64_get_thread_helper();
++#endif
+ 
+ #endif // OS_CPU_LINUX_AARCH64_THREAD_LINUX_AARCH64_HPP
+Index: make/modules/jdk.hotspot.agent/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/jdk.hotspot.agent/Lib.gmk b/make/modules/jdk.hotspot.agent/Lib.gmk
+--- a/make/modules/jdk.hotspot.agent/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/modules/jdk.hotspot.agent/Lib.gmk	(date 1794790991617)
+@@ -74,6 +74,6 @@
+     LIBS_windows := dbgeng.lib $(WIN_JAVA_LIB), \
+ ))
+ 
+-TARGETS += $(BUILD_LIBSA)
++# TARGETS += $(BUILD_LIBSA)
+ 
+ ################################################################################
+Index: make/hotspot/lib/JvmOverrideFiles.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/hotspot/lib/JvmOverrideFiles.gmk b/make/hotspot/lib/JvmOverrideFiles.gmk
+--- a/make/hotspot/lib/JvmOverrideFiles.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/hotspot/lib/JvmOverrideFiles.gmk	(date 1794729749812)
+@@ -65,7 +65,8 @@
+ 	#
+   endif
+ 
+-  ifeq ($(call isTargetCpu, x86), true)
++  #ifeq ($(call isTargetCpu, x86), true)
++  ifeq (false, true)
+     # Performance measurements show that by compiling GC related code, we could
+     # significantly reduce the GC pause time on 32 bit Linux/Unix platforms by
+     # compiling without the PIC flag (-fPIC on linux).
+Index: src/java.base/unix/native/libjli/java_md.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/native/libjli/java_md.c
+--- a/src/java.base/unix/native/libjli/java_md.c	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/java.base/unix/native/libjli/java_md.c	(date 1794735090078)
+@@ -464,12 +464,46 @@
+ }
+ 
+ 
++#ifdef __ANDROID__
++#include <sys/system_properties.h>
++
++static int
++AndroidDeviceApiLevel(void)
++{
++    char v[PROP_VALUE_MAX] = {0};
++    return __system_property_get("ro.build.version.sdk", v) > 0 ? atoi(v) : 0;
++}
++
++static const char *
++AndroidSelectJvmType(const char *jdkroot, const char *jvmtype)
++{
++    char legacy[PATH_MAX + 1];
++    struct stat s;
++    const char *force = getenv("JDK_ANDROID_FORCE_LEGACY_JVM");
++    int api = AndroidDeviceApiLevel();
++
++    if (JLI_StrCmp(jvmtype, "server") == 0 &&
++        ((force != NULL && force[0] == '1') || api < 29)) {
++        JLI_Snprintf(legacy, sizeof(legacy), "%s/lib/server-legacy/" JVM_DLL, jdkroot);
++        if (stat(legacy, &s) == 0) {
++            jvmtype = "server-legacy";
++        }
++    }
++    JLI_TraceLauncher("Android API %d -> jvmtype %s\n", api, jvmtype);
++    return jvmtype;
++}
++#endif
++
+ static jboolean
+ GetJVMPath(const char *jrepath, const char *jvmtype,
+            char *jvmpath, jint jvmpathsize)
+ {
+     struct stat s;
+ 
++#ifdef __ANDROID__
++    jvmtype = AndroidSelectJvmType(jrepath, jvmtype);
++#endif
++
+     if (JLI_StrChr(jvmtype, '/')) {
+         JLI_Snprintf(jvmpath, jvmpathsize, "%s/" JVM_DLL, jvmtype);
+     } else {
+@@ -585,7 +619,46 @@
+ SetExecname(char **argv)
+ {
+     char* exec_path = NULL;
+-#if defined(__linux__)
++#if defined(__ANDROID__)
++    char *__java_home = getenv("JAVA_HOME");
++        char buf[PATH_MAX+1];
++        char *p = NULL;
++        if ((p = JLI_StrRChr(argv[0], '/')) != 0) {
++          p++;
++          if ((JLI_StrLen(p) == 4) && JLI_StrCmp(p, "java") == 0) {
++            JLI_TraceLauncher("SetExecName maybe command line = %s\n", argv[0]);
++            if (*argv[0] != '/') {
++              char *curdir = NULL;
++              /* get absolute path */
++              getcwd(buf, PATH_MAX);
++              curdir = JLI_StringDup(buf);
++              JLI_Snprintf(buf, PATH_MAX, "%s/%s", curdir, argv[0]);
++              JLI_MemFree(curdir);
++            } else {
++              JLI_Snprintf(buf, PATH_MAX, "%s", argv[0]);
++            }
++          } else {
++            if (__java_home != NULL) {
++              JLI_TraceLauncher("SetExecName not java = %s\n", __java_home);
++              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
++            } else {
++              JLI_TraceLauncher("SetExecName fake it = %s\n", argv[0]);
++              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
++                           argv[0]);
++            }
++          }
++        } else {
++            if (__java_home != NULL) {
++              JLI_TraceLauncher("SetExecName not command line = %s\n", __java_home);
++              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
++            } else {
++              JLI_TraceLauncher("SetExecName fake it 2 = %s\n", argv[0]);
++              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
++                           argv[0]);
++            }
++        }
++        exec_path = JLI_StringDup(buf);
++#elif defined(__linux__)
+     {
+         const char* self = "/proc/self/exe";
+         char buf[PATH_MAX+1];
+@@ -595,10 +668,6 @@
+             exec_path = JLI_StringDup(buf);
+         }
+     }
+-#else /* !__linux__ */
+-    {
+-        /* Not implemented */
+-    }
+ #endif
+ 
+     if (exec_path == NULL) {
+Index: make/modules/jdk.jdwp.agent/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/jdk.jdwp.agent/Lib.gmk b/make/modules/jdk.jdwp.agent/Lib.gmk
+--- a/make/modules/jdk.jdwp.agent/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/modules/jdk.jdwp.agent/Lib.gmk	(date 1794786675812)
+@@ -52,6 +52,7 @@
+     NAME := jdwp, \
+     OPTIMIZATION := LOW, \
+     CFLAGS := $(CFLAGS_JDKLIB) -DJDWP_LOGGING, \
++    EXTRA_SRC := java.base:libtinyiconv, \
+     DISABLED_WARNINGS_gcc := unused-function, \
+     DISABLED_WARNINGS_clang := sometimes-uninitialized format-nonliteral \
+         self-assign, \
+Index: make/autoconf/flags-cflags.m4
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/autoconf/flags-cflags.m4 b/make/autoconf/flags-cflags.m4
+--- a/make/autoconf/flags-cflags.m4	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/autoconf/flags-cflags.m4	(date 1794787640353)
+@@ -58,13 +58,7 @@
+       SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
+       SET_SHARED_LIBRARY_MAPFILE='-Wl,-version-script=[$]1'
+ 
+-      # arm specific settings
+-      if test "x$OPENJDK_TARGET_CPU" = "xarm"; then
+-        # '-Wl,-z,origin' isn't used on arm.
+-        SET_SHARED_LIBRARY_ORIGIN='-Wl,-rpath,\$$$$ORIGIN[$]1'
+-      else
+-        SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
+-      fi
++      SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
+     fi
+ 
+   elif test "x$TOOLCHAIN_TYPE" = xxlc; then
+@@ -507,7 +501,7 @@
+   # C99 level.
+   if test "x$TOOLCHAIN_TYPE" = xgcc || test "x$TOOLCHAIN_TYPE" = xclang || test "x$TOOLCHAIN_TYPE" = xxlc; then
+     # Explicitly set C99. clang and xlclang support the same flag.
+-    LANGSTD_CFLAGS="-std=c99"
++    LANGSTD_CFLAGS=""
+   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
+     # MSVC doesn't support C99/C11 explicitly, unless you compile as C++:
+     # LANGSTD_CFLAGS="-TP"
+Index: src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
+--- a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c	(date 1794730015704)
+@@ -177,6 +177,41 @@
+ }
+ #endif
+ 
++#ifdef __ANDROID__
++/*
++ * TODO: Android lacks support for the methods listed below.  In it's place are
++ * alternatives that use existing Android functionality, but lack reentrant
++ * support.  Determine if the following are the most suitable alternatives.
++ *
++ */
++int getgrgid_r(gid_t gid, struct group* grp, char* buf, size_t buflen, struct group** result) {
++
++  *result = NULL;
++  errno = 0;
++  grp = getgrgid(gid);
++  if (grp == NULL) {
++        return errno;
++  }
++  // buf not used by caller (see below)
++  *result = grp;
++  return 0;
++}
++
++int getgrnam_r(const char *name, struct group* grp, char* buf, size_t buflen, struct group** result) {
++
++  *result = NULL;
++  errno = 0;
++  grp = getgrnam(name);
++  if (grp == NULL) {
++        return errno;
++  }
++  // buf not used by caller (see below)
++  *result = grp;
++  return 0;
++
++}
++#endif
++
+ /**
+  * Call this to throw an internal UnixException when a system/library
+  * call fails
+@@ -717,8 +752,9 @@
+ {
+     struct timespec times[2];
+     int err = 0;
++    struct timespec times2[2];
+ 
+-    times[0].tv_sec = accessTime / 1000000000;
++    times[0].tv_sec = times2[0].tv_sec = accessTime / 1000000000;
+     times[0].tv_nsec = accessTime % 1000000000;
+ 
+     times[1].tv_sec = modificationTime / 1000000000;
+Index: make/hotspot/lib/JvmFlags.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/hotspot/lib/JvmFlags.gmk b/make/hotspot/lib/JvmFlags.gmk
+--- a/make/hotspot/lib/JvmFlags.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/hotspot/lib/JvmFlags.gmk	(date 1794729749804)
+@@ -51,6 +51,12 @@
+     -I$(TOPDIR)/src/java.base/share/native/libjimage \
+     #
+ 
++ifeq ($(call isTargetOs, android ios), true)
++  JVM_CFLAGS_INCLUDES += \
++    -I$(TOPDIR)/src/hotspot/os/linux \
++    #
++endif
++
+ # INCLUDE_SUFFIX_* is only meant for including the proper
+ # platform files. Don't use it to guard code. Use the value of
+ # HOTSPOT_TARGET_CPU_DEFINE etc. instead.
+Index: src/java.base/unix/native/libnet/net_util_md.h
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libnet/net_util_md.h b/src/java.base/unix/native/libnet/net_util_md.h
+--- a/src/java.base/unix/native/libnet/net_util_md.h	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/java.base/unix/native/libnet/net_util_md.h	(date 1794730015695)
+@@ -26,10 +26,17 @@
+ #ifndef NET_UTILS_MD_H
+ #define NET_UTILS_MD_H
+ 
++#ifdef __ANDROID__
++#include <netinet/in.h>
++#endif
+ #include <netdb.h>
+ #include <poll.h>
+ #include <sys/socket.h>
+ 
++#ifdef __ANDROID__
++#include <netinet/in.h>
++#endif
++
+ /************************************************************************
+  * Macros and constants
+  */
+Index: src/java.base/unix/native/libnet/net_util_md.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libnet/net_util_md.c b/src/java.base/unix/native/libnet/net_util_md.c
+--- a/src/java.base/unix/native/libnet/net_util_md.c	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/java.base/unix/native/libnet/net_util_md.c	(date 1794730015687)
+@@ -129,6 +129,7 @@
+     SOCKETADDRESS sa;
+     socklen_t sa_len = sizeof(SOCKETADDRESS);
+ 
++#ifndef __ANDROID__  // ANDROID: skip check, see libcore commit ae218d9b
+     fd = socket(AF_INET6, SOCK_STREAM, 0) ;
+     if (fd < 0) {
+         /*
+@@ -172,6 +173,7 @@
+         }
+     }
+ #endif
++#endif  // !defined __ANDROID__
+ 
+     /*
+      *  OK we may have the stack available in the kernel,
+Index: src/hotspot/cpu/arm/icache_arm.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/cpu/arm/icache_arm.cpp b/src/hotspot/cpu/arm/icache_arm.cpp
+--- a/src/hotspot/cpu/arm/icache_arm.cpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/hotspot/cpu/arm/icache_arm.cpp	(date 1794729779973)
+@@ -31,7 +31,7 @@
+ 
+ 
+ static int icache_flush(address addr, int lines, int magic) {
+-  __builtin___clear_cache(addr, addr + (lines << ICache::log2_line_size));
++  __builtin___clear_cache((char*) addr, (char*) (addr + (lines << ICache::log2_line_size)));
+   return magic;
+ }
+ 
+Index: make/modules/java.base/lib/CoreLibraries.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/java.base/lib/CoreLibraries.gmk b/make/modules/java.base/lib/CoreLibraries.gmk
+--- a/make/modules/java.base/lib/CoreLibraries.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/modules/java.base/lib/CoreLibraries.gmk	(date 1794786795896)
+@@ -116,6 +116,10 @@
+ 
+ $(BUILD_LIBJAVA): $(BUILD_LIBFDLIBM)
+ 
++ifeq ($(OPENJDK_TARGET_OS), linux)
++  $(BUILD_LIBJAVA): $(BUILD_LIBTINYICONV)
++endif
++
+ ##########################################################################################
+ 
+ BUILD_LIBZIP_EXCLUDES :=
+Index: make/autoconf/build-aux/config.sub
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/autoconf/build-aux/config.sub b/make/autoconf/build-aux/config.sub
+--- a/make/autoconf/build-aux/config.sub	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/autoconf/build-aux/config.sub	(date 1794732135325)
+@@ -47,7 +47,7 @@
+ fi
+ 
+ # Filter out everything that doesn't begin with "aarch64-"
+-if ! echo $* | grep '^aarch64-' >/dev/null ; then
++if ! echo $* | egrep "^aarch64-|-android" >/dev/null ; then
+     . $DIR/autoconf-config.sub "$@"
+     # autoconf-config.sub exits, so we never reach here, but just in
+     # case we do:
+@@ -58,6 +58,10 @@
+     case $1 in
+         -- )   # Stop option processing
+             shift; break ;;
++        *-android* )
++            echo $1
++            exit
++            ;;
+         aarch64-* )
+             config=`echo $1 | sed 's/^aarch64-/arm-/'`
+             sub_args="$sub_args $config"
+Index: make/hotspot/gensrc/GensrcAdlc.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/hotspot/gensrc/GensrcAdlc.gmk b/make/hotspot/gensrc/GensrcAdlc.gmk
+--- a/make/hotspot/gensrc/GensrcAdlc.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/hotspot/gensrc/GensrcAdlc.gmk	(date 1794729749792)
+@@ -84,6 +84,10 @@
+   # ADLC flags depending on target OS
+   ifeq ($(call isTargetOs, linux), true)
+     ADLCFLAGS += -DLINUX=1 -D_GNU_SOURCE=1
++    # Android: keep C2 off x18 (shadow call stack), matching R18_RESERVED in hotspot
++    ifeq ($(HOTSPOT_TARGET_CPU_ARCH), aarch64)
++      ADLCFLAGS += -DR18_RESERVED
++    endif
+   else ifeq ($(call isTargetOs, aix), true)
+     ADLCFLAGS += -DAIX=1
+   else ifeq ($(call isTargetOs, macosx), true)
+Index: make/conf/branding.conf
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/conf/branding.conf b/make/conf/branding.conf
+--- a/make/conf/branding.conf	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/conf/branding.conf	(date 1794729749784)
+@@ -25,7 +25,7 @@
+ 
+ LAUNCHER_NAME=openjdk
+ PRODUCT_NAME=OpenJDK
+-PRODUCT_SUFFIX="Runtime Environment"
++PRODUCT_SUFFIX="Android Runtime Environment"
+ JDK_RC_PLATFORM_NAME=Platform
+ COMPANY_NAME=N/A
+ HOTSPOT_VM_DISTRO="OpenJDK"
+Index: make/modules/java.instrument/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/java.instrument/Lib.gmk b/make/modules/java.instrument/Lib.gmk
+--- a/make/modules/java.instrument/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/modules/java.instrument/Lib.gmk	(date 1794786744210)
+@@ -36,6 +36,7 @@
+ $(eval $(call SetupJdkLibrary, BUILD_LIBINSTRUMENT, \
+     NAME := instrument, \
+     OPTIMIZATION := LOW, \
++    EXTRA_SRC := java.base:libtinyiconv, \
+     CFLAGS := $(CFLAGS_JDKLIB) $(LIBINSTRUMENT_CFLAGS), \
+     CFLAGS_debug := -DJPLIS_LOGGING, \
+     CFLAGS_release := -DNO_JPLIS_LOGGING, \
+Index: make/modules/java.desktop/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/java.desktop/Lib.gmk b/make/modules/java.desktop/Lib.gmk
+--- a/make/modules/java.desktop/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/modules/java.desktop/Lib.gmk	(date 1794729749825)
+@@ -76,7 +76,7 @@
+ 
+   $(BUILD_LIBJSOUND): $(call FindLib, java.base, java)
+ 
+-  TARGETS += $(BUILD_LIBJSOUND)
++  # TARGETS += $(BUILD_LIBJSOUND)
+ 
+ endif
+ 
 Index: src/hotspot/os/linux/os_linux.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -319,198 +955,6 @@ diff --git a/make/autoconf/lib-freetype.m4 b/make/autoconf/lib-freetype.m4
      FREETYPE_TO_USE=system
    fi
    if test "x$with_freetype" != "x" ; then
-Index: src/hotspot/os_cpu/linux_arm/linux_arm_32.S
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/hotspot/os_cpu/linux_arm/linux_arm_32.S b/src/hotspot/os_cpu/linux_arm/linux_arm_32.S
---- a/src/hotspot/os_cpu/linux_arm/linux_arm_32.S	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/hotspot/os_cpu/linux_arm/linux_arm_32.S	(date 1794730015577)
-@@ -94,7 +94,7 @@
-         stmia to!, {r3 - r9, ip}
-         bgt     dw_f2b_loop_32
- dw_f2b_loop_32_finish:
--        addlts  r2, #32
-+        addslt  r2, #32
-         beq     disjoint_words_finish
-         cmp     r2, #16
- 	blt	disjoint_words_small
-@@ -142,7 +142,7 @@
-         stmia to!, {r3 - r9, ip}
-         bgt     cw_f2b_loop_32
- cw_f2b_loop_32_finish:
--        addlts  r2, #32
-+        addslt  r2, #32
-         beq     conjoint_words_finish
-         cmp     r2, #16
- 	blt	conjoint_words_small
-@@ -175,7 +175,7 @@
-         stmdb to!, {r3-r9,ip}
-         bgt     cw_b2f_loop_32
- cw_b2f_loop_32_finish:
--        addlts  r2, #32
-+        addslt  r2, #32
-         beq     conjoint_words_finish
-         cmp     r2, #16
- 	blt	cw_b2f_copy_small
-@@ -227,7 +227,7 @@
-         stmia to!, {r3 - r9, ip}
-         bgt     cs_f2b_loop_32
- cs_f2b_loop_32_finish:
--        addlts  r2, #32
-+        addslt  r2, #32
-         beq     conjoint_shorts_finish
-         movs    r6, r2, lsr #3
-         .align 3
-@@ -243,11 +243,11 @@
-         beq     conjoint_shorts_finish
-         cmp     r2, #4
-         ldrh    r3, [from], #2
--        ldrgeh  r4, [from], #2
--        ldrgth  r5, [from], #2
-+        ldrhge  r4, [from], #2
-+        ldrhgt  r5, [from], #2
-         strh    r3, [to], #2
--        strgeh  r4, [to], #2
--        strgth  r5, [to], #2
-+        strhge  r4, [to], #2
-+        strhgt  r5, [to], #2
-         b       conjoint_shorts_finish
- 
- 	# Destination not aligned
-@@ -305,11 +305,11 @@
-         beq     conjoint_shorts_finish
-         cmp     r2, #4
-         ldrh    r3, [from], #2
--        ldrgeh  r4, [from], #2
--        ldrgth  r5, [from], #2
-+        ldrhge  r4, [from], #2
-+        ldrhgt  r5, [from], #2
-         strh    r3, [to], #2
--        strgeh  r4, [to], #2
--        strgth  r5, [to], #2
-+        strhge  r4, [to], #2
-+        strhgt  r5, [to], #2
-         b       conjoint_shorts_finish
- 
- 	# Src and dest overlap, copy in a descending order
-@@ -332,7 +332,7 @@
-         stmdb to!, {r3-r9,ip}
-         bgt     cs_b2f_loop_32
- cs_b2f_loop_32_finish:
--        addlts  r2, #32
-+        addslt  r2, #32
-         beq     conjoint_shorts_finish
-         cmp     r2, #24
-         blt     cs_b2f_16
-@@ -358,11 +358,11 @@
- cs_b2f_all_copy:
-         cmp     r2, #4
-         ldrh    r3, [from, #-2]!
--        ldrgeh  r4, [from, #-2]!
--        ldrgth  r5, [from, #-2]!
-+        ldrhge  r4, [from, #-2]!
-+        ldrhgt  r5, [from, #-2]!
-         strh    r3, [to, #-2]!
--        strgeh  r4, [to, #-2]!
--        strgth  r5, [to, #-2]!
-+        strhge  r4, [to, #-2]!
-+        strhgt  r5, [to, #-2]!
-         b       conjoint_shorts_finish
- 
- 	# Destination not aligned
-@@ -397,7 +397,7 @@
-         bgt     cs_b2f_16_loop_u
-         beq     conjoint_shorts_finish
- cs_b2f_16_loop_u_finished:
--        addlts  r2, #16
-+        addslt  r2, #16
-         ldr     r3, [from]
- 	cmp     r2, #10
-         blt     cs_b2f_2_u_loop
-@@ -460,7 +460,7 @@
-         stmia to!, {r3 - r9, ip}
-         bgt     cl_f2b_loop_32
- cl_f2b_loop_32_finish:
--        addlts  r2, #32
-+        addslt  r2, #32
-         beq     conjoint_longs_finish
- conjoint_longs_small:
-         cmp     r2, #16
-@@ -493,7 +493,7 @@
-         stmdb 	to!, {r3 - r9, ip}
-         bgt     cl_b2f_loop_32
- cl_b2f_loop_32_finish:
--        addlts  r2, #32
-+        addslt  r2, #32
-         beq     conjoint_longs_finish
-         cmp     r2, #16
- 	blt	cl_b2f_copy_8
-Index: src/hotspot/os/posix/os_posix.cpp
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.cpp
---- a/src/hotspot/os/posix/os_posix.cpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794730015506)
-@@ -65,7 +65,9 @@
- #include <sys/wait.h>
- #include <time.h>
- #include <unistd.h>
-+#ifndef __ANDROID__
- #include <utmpx.h>
-+#endif
- 
- #ifdef __APPLE__
-   #include <crt_externs.h>
-@@ -418,6 +420,7 @@
- // unfortunately it does not work on macOS and Linux because the utx chain has no entry
- // for reboot at least on my test machines
- void os::Posix::print_uptime_info(outputStream* st) {
-+#ifndef __ANDROID__
-   int bootsec = -1;
-   int currsec = time(NULL);
-   struct utmpx* ent;
-@@ -432,6 +435,7 @@
-   if (bootsec != -1) {
-     os::print_dhm(st, "OS uptime:", (long) (currsec-bootsec));
-   }
-+#endif
- }
- 
- static void print_rlimit(outputStream* st, const char* msg,
-Index: src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp b/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp
---- a/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp	(date 1794788825547)
-@@ -47,6 +47,20 @@
-   bool pd_get_top_frame(frame* fr_addr, void* ucontext, bool isInJava);
- public:
- 
--  static Thread *aarch64_get_thread_helper();
-+#if defined(__ANDROID__) && !defined(ANDROID_EMUTLS) && __ANDROID_API__ < 29
-+#error "Native-TLS libjvm must be built for API >= 29 (or define ANDROID_EMUTLS)"
-+#endif
-+
-+#if defined(__ANDROID__) && defined(ANDROID_EMUTLS)
-+// Android API < 29 rejects libraries with a PT_TLS segment, so this build
-+// uses emulated TLS and cannot use the TLSDESC helper in
-+// threadLS_linux_aarch64.S. This is an ordinary C++ function that may
-+// clobber r0-r17; MacroAssembler::get_thread() saves accordingly.
-+static Thread *aarch64_get_thread_helper() {
-+  return Thread::current();
-+}
-+#else
-+static Thread *aarch64_get_thread_helper();
-+#endif
- 
- #endif // OS_CPU_LINUX_AARCH64_THREAD_LINUX_AARCH64_HPP
 Index: src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -558,6 +1002,23 @@ diff --git a/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c b/src/jav
  jint
  AWT_OnLoad(JavaVM *vm, void *reserved)
  {
+Index: src/hotspot/cpu/aarch64/immediate_aarch64.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/cpu/aarch64/immediate_aarch64.cpp b/src/hotspot/cpu/aarch64/immediate_aarch64.cpp
+--- a/src/hotspot/cpu/aarch64/immediate_aarch64.cpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/src/hotspot/cpu/aarch64/immediate_aarch64.cpp	(date 1794795681427)
+@@ -133,7 +133,7 @@
+   // nbits may be 64 in which case we want mask to be -1
+   uint64_t mask = ones(nbits);
+   for (int i = 0; i < count ; i++) {
+-    result <<= nbits;
++    result = (nbits < 64) ? (result << nbits) : 0;
+     result |= (bits & mask);
+   }
+   return result;
 Index: src/hotspot/os/linux/os_perf_linux.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1016,22 +1477,6 @@ diff --git a/make/autoconf/platform.m4 b/make/autoconf/platform.m4
      *darwin*)
        VAR_OS=macosx
        VAR_OS_TYPE=unix
-Index: make/modules/jdk.hotspot.agent/Lib.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/modules/jdk.hotspot.agent/Lib.gmk b/make/modules/jdk.hotspot.agent/Lib.gmk
---- a/make/modules/jdk.hotspot.agent/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/modules/jdk.hotspot.agent/Lib.gmk	(date 1794790991617)
-@@ -74,6 +74,6 @@
-     LIBS_windows := dbgeng.lib $(WIN_JAVA_LIB), \
- ))
- 
--TARGETS += $(BUILD_LIBSA)
-+# TARGETS += $(BUILD_LIBSA)
- 
- ################################################################################
 Index: src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1058,138 +1503,6 @@ diff --git a/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp b/src/hotspot/cp
    push(saved_regs, sp);
  
    mov(lr, CAST_FROM_FN_PTR(address, JavaThread::aarch64_get_thread_helper));
-Index: make/hotspot/lib/JvmOverrideFiles.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/hotspot/lib/JvmOverrideFiles.gmk b/make/hotspot/lib/JvmOverrideFiles.gmk
---- a/make/hotspot/lib/JvmOverrideFiles.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/hotspot/lib/JvmOverrideFiles.gmk	(date 1794729749812)
-@@ -65,7 +65,8 @@
- 	#
-   endif
- 
--  ifeq ($(call isTargetCpu, x86), true)
-+  #ifeq ($(call isTargetCpu, x86), true)
-+  ifeq (false, true)
-     # Performance measurements show that by compiling GC related code, we could
-     # significantly reduce the GC pause time on 32 bit Linux/Unix platforms by
-     # compiling without the PIC flag (-fPIC on linux).
-Index: src/java.base/unix/native/libjli/java_md.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/native/libjli/java_md.c
---- a/src/java.base/unix/native/libjli/java_md.c	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/java.base/unix/native/libjli/java_md.c	(date 1794735090078)
-@@ -464,12 +464,46 @@
- }
- 
- 
-+#ifdef __ANDROID__
-+#include <sys/system_properties.h>
-+
-+static int
-+AndroidDeviceApiLevel(void)
-+{
-+    char v[PROP_VALUE_MAX] = {0};
-+    return __system_property_get("ro.build.version.sdk", v) > 0 ? atoi(v) : 0;
-+}
-+
-+static const char *
-+AndroidSelectJvmType(const char *jdkroot, const char *jvmtype)
-+{
-+    char legacy[PATH_MAX + 1];
-+    struct stat s;
-+    const char *force = getenv("JDK_ANDROID_FORCE_LEGACY_JVM");
-+    int api = AndroidDeviceApiLevel();
-+
-+    if (JLI_StrCmp(jvmtype, "server") == 0 &&
-+        ((force != NULL && force[0] == '1') || api < 29)) {
-+        JLI_Snprintf(legacy, sizeof(legacy), "%s/lib/server-legacy/" JVM_DLL, jdkroot);
-+        if (stat(legacy, &s) == 0) {
-+            jvmtype = "server-legacy";
-+        }
-+    }
-+    JLI_TraceLauncher("Android API %d -> jvmtype %s\n", api, jvmtype);
-+    return jvmtype;
-+}
-+#endif
-+
- static jboolean
- GetJVMPath(const char *jrepath, const char *jvmtype,
-            char *jvmpath, jint jvmpathsize)
- {
-     struct stat s;
- 
-+#ifdef __ANDROID__
-+    jvmtype = AndroidSelectJvmType(jrepath, jvmtype);
-+#endif
-+
-     if (JLI_StrChr(jvmtype, '/')) {
-         JLI_Snprintf(jvmpath, jvmpathsize, "%s/" JVM_DLL, jvmtype);
-     } else {
-@@ -585,7 +619,46 @@
- SetExecname(char **argv)
- {
-     char* exec_path = NULL;
--#if defined(__linux__)
-+#if defined(__ANDROID__)
-+    char *__java_home = getenv("JAVA_HOME");
-+        char buf[PATH_MAX+1];
-+        char *p = NULL;
-+        if ((p = JLI_StrRChr(argv[0], '/')) != 0) {
-+          p++;
-+          if ((JLI_StrLen(p) == 4) && JLI_StrCmp(p, "java") == 0) {
-+            JLI_TraceLauncher("SetExecName maybe command line = %s\n", argv[0]);
-+            if (*argv[0] != '/') {
-+              char *curdir = NULL;
-+              /* get absolute path */
-+              getcwd(buf, PATH_MAX);
-+              curdir = JLI_StringDup(buf);
-+              JLI_Snprintf(buf, PATH_MAX, "%s/%s", curdir, argv[0]);
-+              JLI_MemFree(curdir);
-+            } else {
-+              JLI_Snprintf(buf, PATH_MAX, "%s", argv[0]);
-+            }
-+          } else {
-+            if (__java_home != NULL) {
-+              JLI_TraceLauncher("SetExecName not java = %s\n", __java_home);
-+              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
-+            } else {
-+              JLI_TraceLauncher("SetExecName fake it = %s\n", argv[0]);
-+              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
-+                           argv[0]);
-+            }
-+          }
-+        } else {
-+            if (__java_home != NULL) {
-+              JLI_TraceLauncher("SetExecName not command line = %s\n", __java_home);
-+              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
-+            } else {
-+              JLI_TraceLauncher("SetExecName fake it 2 = %s\n", argv[0]);
-+              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
-+                           argv[0]);
-+            }
-+        }
-+        exec_path = JLI_StringDup(buf);
-+#elif defined(__linux__)
-     {
-         const char* self = "/proc/self/exe";
-         char buf[PATH_MAX+1];
-@@ -595,10 +668,6 @@
-             exec_path = JLI_StringDup(buf);
-         }
-     }
--#else /* !__linux__ */
--    {
--        /* Not implemented */
--    }
- #endif
- 
-     if (exec_path == NULL) {
 Index: make/common/Modules.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1209,22 +1522,6 @@ diff --git a/make/common/Modules.gmk b/make/common/Modules.gmk
  
  SRC_SUBDIRS += $(OPENJDK_TARGET_OS)/classes
  ifneq ($(OPENJDK_TARGET_OS), $(OPENJDK_TARGET_OS_TYPE))
-Index: make/modules/jdk.jdwp.agent/Lib.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/modules/jdk.jdwp.agent/Lib.gmk b/make/modules/jdk.jdwp.agent/Lib.gmk
---- a/make/modules/jdk.jdwp.agent/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/modules/jdk.jdwp.agent/Lib.gmk	(date 1794786675812)
-@@ -52,6 +52,7 @@
-     NAME := jdwp, \
-     OPTIMIZATION := LOW, \
-     CFLAGS := $(CFLAGS_JDKLIB) -DJDWP_LOGGING, \
-+    EXTRA_SRC := java.base:libtinyiconv, \
-     DISABLED_WARNINGS_gcc := unused-function, \
-     DISABLED_WARNINGS_clang := sometimes-uninitialized format-nonliteral \
-         self-assign, \
 Index: src/hotspot/os_cpu/linux_x86/fpu_control.h
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1344,99 +1641,6 @@ new file mode 100644
 +extern fpu_control_t __fpu_control;
 +
 +#endif	/* fpu_control.h */
-Index: make/autoconf/flags-cflags.m4
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/autoconf/flags-cflags.m4 b/make/autoconf/flags-cflags.m4
---- a/make/autoconf/flags-cflags.m4	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/autoconf/flags-cflags.m4	(date 1794787640353)
-@@ -58,13 +58,7 @@
-       SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
-       SET_SHARED_LIBRARY_MAPFILE='-Wl,-version-script=[$]1'
- 
--      # arm specific settings
--      if test "x$OPENJDK_TARGET_CPU" = "xarm"; then
--        # '-Wl,-z,origin' isn't used on arm.
--        SET_SHARED_LIBRARY_ORIGIN='-Wl,-rpath,\$$$$ORIGIN[$]1'
--      else
--        SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
--      fi
-+      SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
-     fi
- 
-   elif test "x$TOOLCHAIN_TYPE" = xxlc; then
-@@ -507,7 +501,7 @@
-   # C99 level.
-   if test "x$TOOLCHAIN_TYPE" = xgcc || test "x$TOOLCHAIN_TYPE" = xclang || test "x$TOOLCHAIN_TYPE" = xxlc; then
-     # Explicitly set C99. clang and xlclang support the same flag.
--    LANGSTD_CFLAGS="-std=c99"
-+    LANGSTD_CFLAGS=""
-   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
-     # MSVC doesn't support C99/C11 explicitly, unless you compile as C++:
-     # LANGSTD_CFLAGS="-TP"
-Index: src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
---- a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c	(date 1794730015704)
-@@ -177,6 +177,41 @@
- }
- #endif
- 
-+#ifdef __ANDROID__
-+/*
-+ * TODO: Android lacks support for the methods listed below.  In it's place are
-+ * alternatives that use existing Android functionality, but lack reentrant
-+ * support.  Determine if the following are the most suitable alternatives.
-+ *
-+ */
-+int getgrgid_r(gid_t gid, struct group* grp, char* buf, size_t buflen, struct group** result) {
-+
-+  *result = NULL;
-+  errno = 0;
-+  grp = getgrgid(gid);
-+  if (grp == NULL) {
-+        return errno;
-+  }
-+  // buf not used by caller (see below)
-+  *result = grp;
-+  return 0;
-+}
-+
-+int getgrnam_r(const char *name, struct group* grp, char* buf, size_t buflen, struct group** result) {
-+
-+  *result = NULL;
-+  errno = 0;
-+  grp = getgrnam(name);
-+  if (grp == NULL) {
-+        return errno;
-+  }
-+  // buf not used by caller (see below)
-+  *result = grp;
-+  return 0;
-+
-+}
-+#endif
-+
- /**
-  * Call this to throw an internal UnixException when a system/library
-  * call fails
-@@ -717,8 +752,9 @@
- {
-     struct timespec times[2];
-     int err = 0;
-+    struct timespec times2[2];
- 
--    times[0].tv_sec = accessTime / 1000000000;
-+    times[0].tv_sec = times2[0].tv_sec = accessTime / 1000000000;
-     times[0].tv_nsec = accessTime % 1000000000;
- 
-     times[1].tv_sec = modificationTime / 1000000000;
 Index: src/hotspot/os_cpu/linux_arm/fpu_control.h
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2256,27 +2460,6 @@ diff --git a/make/common/JdkNativeCompilation.gmk b/make/common/JdkNativeCompila
  FindSrcDirsForComponent += \
    $(call uniq, $(wildcard \
        $(TOPDIR)/src/$(strip $1)/$(OPENJDK_TARGET_OS)/native/$(strip $2) \
-Index: make/hotspot/lib/JvmFlags.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/hotspot/lib/JvmFlags.gmk b/make/hotspot/lib/JvmFlags.gmk
---- a/make/hotspot/lib/JvmFlags.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/hotspot/lib/JvmFlags.gmk	(date 1794729749804)
-@@ -51,6 +51,12 @@
-     -I$(TOPDIR)/src/java.base/share/native/libjimage \
-     #
- 
-+ifeq ($(call isTargetOs, android ios), true)
-+  JVM_CFLAGS_INCLUDES += \
-+    -I$(TOPDIR)/src/hotspot/os/linux \
-+    #
-+endif
-+
- # INCLUDE_SUFFIX_* is only meant for including the proper
- # platform files. Don't use it to guard code. Use the value of
- # HOTSPOT_TARGET_CPU_DEFINE etc. instead.
 Index: src/java.base/unix/native/libjava/jni_util_md.c
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2338,32 +2521,6 @@ diff --git a/src/jdk.hotspot.agent/linux/native/libsaproc/ps_core.c b/src/jdk.ho
  }
  
  #define ROUNDUP(x, y)  ((((x)+((y)-1))/(y))*(y))
-Index: src/java.base/unix/native/libnet/net_util_md.h
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libnet/net_util_md.h b/src/java.base/unix/native/libnet/net_util_md.h
---- a/src/java.base/unix/native/libnet/net_util_md.h	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/java.base/unix/native/libnet/net_util_md.h	(date 1794730015695)
-@@ -26,10 +26,17 @@
- #ifndef NET_UTILS_MD_H
- #define NET_UTILS_MD_H
- 
-+#ifdef __ANDROID__
-+#include <netinet/in.h>
-+#endif
- #include <netdb.h>
- #include <poll.h>
- #include <sys/socket.h>
- 
-+#ifdef __ANDROID__
-+#include <netinet/in.h>
-+#endif
-+
- /************************************************************************
-  * Macros and constants
-  */
 Index: make/autoconf/libraries.m4
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2408,30 +2565,6 @@ diff --git a/make/autoconf/libraries.m4 b/make/autoconf/libraries.m4
  
    # Check if ffi is needed
    if HOTSPOT_CHECK_JVM_VARIANT(zero); then
-Index: src/java.base/unix/native/libnet/net_util_md.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libnet/net_util_md.c b/src/java.base/unix/native/libnet/net_util_md.c
---- a/src/java.base/unix/native/libnet/net_util_md.c	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/java.base/unix/native/libnet/net_util_md.c	(date 1794730015687)
-@@ -129,6 +129,7 @@
-     SOCKETADDRESS sa;
-     socklen_t sa_len = sizeof(SOCKETADDRESS);
- 
-+#ifndef __ANDROID__  // ANDROID: skip check, see libcore commit ae218d9b
-     fd = socket(AF_INET6, SOCK_STREAM, 0) ;
-     if (fd < 0) {
-         /*
-@@ -172,6 +173,7 @@
-         }
-     }
- #endif
-+#endif  // !defined __ANDROID__
- 
-     /*
-      *  OK we may have the stack available in the kernel,
 Index: src/java.base/unix/native/libjava/java_props_md.c
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2541,89 +2674,6 @@ diff --git a/src/java.base/unix/native/libjava/java_props_md.c b/src/java.base/u
  #if defined(_ALLBSD_SOURCE)
  #if !defined(P_tmpdir)
  #include <paths.h>
-Index: src/hotspot/cpu/arm/icache_arm.cpp
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/hotspot/cpu/arm/icache_arm.cpp b/src/hotspot/cpu/arm/icache_arm.cpp
---- a/src/hotspot/cpu/arm/icache_arm.cpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/hotspot/cpu/arm/icache_arm.cpp	(date 1794729779973)
-@@ -31,7 +31,7 @@
- 
- 
- static int icache_flush(address addr, int lines, int magic) {
--  __builtin___clear_cache(addr, addr + (lines << ICache::log2_line_size));
-+  __builtin___clear_cache((char*) addr, (char*) (addr + (lines << ICache::log2_line_size)));
-   return magic;
- }
- 
-Index: make/modules/java.base/lib/CoreLibraries.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/modules/java.base/lib/CoreLibraries.gmk b/make/modules/java.base/lib/CoreLibraries.gmk
---- a/make/modules/java.base/lib/CoreLibraries.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/modules/java.base/lib/CoreLibraries.gmk	(date 1794786795896)
-@@ -116,6 +116,10 @@
- 
- $(BUILD_LIBJAVA): $(BUILD_LIBFDLIBM)
- 
-+ifeq ($(OPENJDK_TARGET_OS), linux)
-+  $(BUILD_LIBJAVA): $(BUILD_LIBTINYICONV)
-+endif
-+
- ##########################################################################################
- 
- BUILD_LIBZIP_EXCLUDES :=
-Index: make/autoconf/build-aux/config.sub
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/autoconf/build-aux/config.sub b/make/autoconf/build-aux/config.sub
---- a/make/autoconf/build-aux/config.sub	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/autoconf/build-aux/config.sub	(date 1794732135325)
-@@ -47,7 +47,7 @@
- fi
- 
- # Filter out everything that doesn't begin with "aarch64-"
--if ! echo $* | grep '^aarch64-' >/dev/null ; then
-+if ! echo $* | egrep "^aarch64-|-android" >/dev/null ; then
-     . $DIR/autoconf-config.sub "$@"
-     # autoconf-config.sub exits, so we never reach here, but just in
-     # case we do:
-@@ -58,6 +58,10 @@
-     case $1 in
-         -- )   # Stop option processing
-             shift; break ;;
-+        *-android* )
-+            echo $1
-+            exit
-+            ;;
-         aarch64-* )
-             config=`echo $1 | sed 's/^aarch64-/arm-/'`
-             sub_args="$sub_args $config"
-Index: make/hotspot/gensrc/GensrcAdlc.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/hotspot/gensrc/GensrcAdlc.gmk b/make/hotspot/gensrc/GensrcAdlc.gmk
---- a/make/hotspot/gensrc/GensrcAdlc.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/hotspot/gensrc/GensrcAdlc.gmk	(date 1794729749792)
-@@ -84,6 +84,10 @@
-   # ADLC flags depending on target OS
-   ifeq ($(call isTargetOs, linux), true)
-     ADLCFLAGS += -DLINUX=1 -D_GNU_SOURCE=1
-+    # Android: keep C2 off x18 (shadow call stack), matching R18_RESERVED in hotspot
-+    ifeq ($(HOTSPOT_TARGET_CPU_ARCH), aarch64)
-+      ADLCFLAGS += -DR18_RESERVED
-+    endif
-   else ifeq ($(call isTargetOs, aix), true)
-     ADLCFLAGS += -DAIX=1
-   else ifeq ($(call isTargetOs, macosx), true)
 Index: src/jdk.hotspot.agent/linux/native/libsaproc/elfmacros.h
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2642,23 +2692,6 @@ diff --git a/src/jdk.hotspot.agent/linux/native/libsaproc/elfmacros.h b/src/jdk.
  
  #else
  
-Index: make/conf/branding.conf
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/conf/branding.conf b/make/conf/branding.conf
---- a/make/conf/branding.conf	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/conf/branding.conf	(date 1794729749784)
-@@ -25,7 +25,7 @@
- 
- LAUNCHER_NAME=openjdk
- PRODUCT_NAME=OpenJDK
--PRODUCT_SUFFIX="Runtime Environment"
-+PRODUCT_SUFFIX="Android Runtime Environment"
- JDK_RC_PLATFORM_NAME=Platform
- COMPANY_NAME=N/A
- HOTSPOT_VM_DISTRO="OpenJDK"
 Index: src/hotspot/os/linux/gc/z/zNUMA_linux.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2679,19 +2712,3 @@ diff --git a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp b/src/hotspot/os/linux/gc
  }
  
  uint32_t ZNUMA::count() {
-Index: make/modules/java.instrument/Lib.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/modules/java.instrument/Lib.gmk b/make/modules/java.instrument/Lib.gmk
---- a/make/modules/java.instrument/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/make/modules/java.instrument/Lib.gmk	(date 1794786744210)
-@@ -36,6 +36,7 @@
- $(eval $(call SetupJdkLibrary, BUILD_LIBINSTRUMENT, \
-     NAME := instrument, \
-     OPTIMIZATION := LOW, \
-+    EXTRA_SRC := java.base:libtinyiconv, \
-     CFLAGS := $(CFLAGS_JDKLIB) $(LIBINSTRUMENT_CFLAGS), \
-     CFLAGS_debug := -DJPLIS_LOGGING, \
-     CFLAGS_release := -DNO_JPLIS_LOGGING, \

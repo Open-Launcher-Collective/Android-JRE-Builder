@@ -2518,6 +2518,23 @@ diff --git a/make/modules/java.desktop/Lib.gmk b/make/modules/java.desktop/Lib.g
  
  endif
  
+Index: src/hotspot/cpu/aarch64/immediate_aarch64.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/cpu/aarch64/immediate_aarch64.cpp b/src/hotspot/cpu/aarch64/immediate_aarch64.cpp
+--- a/src/hotspot/cpu/aarch64/immediate_aarch64.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/hotspot/cpu/aarch64/immediate_aarch64.cpp	(date 1794795740798)
+@@ -157,7 +157,7 @@
+   uint64_t result = 0;
+   uint64_t mask = ones(nbits);
+   for (int i = 0; i < count ; i++) {
+-    result <<= nbits;
++    result = (nbits < 64) ? (result << nbits) : 0;
+     result |= (bits & mask);
+   }
+   return result;
 Index: src/hotspot/os/linux/os_linux.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP

@@ -1543,6 +1543,23 @@ diff --git a/src/hotspot/os_cpu/linux_aarch64/javaThread_linux_aarch64.hpp b/src
 +#endif
  
  #endif // OS_CPU_LINUX_AARCH64_JAVATHREAD_LINUX_AARCH64_HPP
+Index: src/hotspot/cpu/aarch64/immediate_aarch64.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/cpu/aarch64/immediate_aarch64.cpp b/src/hotspot/cpu/aarch64/immediate_aarch64.cpp
+--- a/src/hotspot/cpu/aarch64/immediate_aarch64.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
++++ b/src/hotspot/cpu/aarch64/immediate_aarch64.cpp	(date 1794795807759)
+@@ -156,7 +156,7 @@
+   uint64_t result = 0;
+   uint64_t mask = ones(nbits);
+   for (int i = 0; i < count ; i++) {
+-    result <<= nbits;
++    result = (nbits < 64) ? (result << nbits) : 0;
+     result |= (bits & mask);
+   }
+   return result;
 Index: src/java.base/unix/native/libjava/posix_spawn.h
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
