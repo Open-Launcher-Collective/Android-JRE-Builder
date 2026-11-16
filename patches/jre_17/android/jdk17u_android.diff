@@ -1016,6 +1016,22 @@ diff --git a/make/autoconf/platform.m4 b/make/autoconf/platform.m4
      *darwin*)
        VAR_OS=macosx
        VAR_OS_TYPE=unix
+Index: make/modules/jdk.hotspot.agent/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/jdk.hotspot.agent/Lib.gmk b/make/modules/jdk.hotspot.agent/Lib.gmk
+--- a/make/modules/jdk.hotspot.agent/Lib.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/modules/jdk.hotspot.agent/Lib.gmk	(date 1794790991617)
+@@ -74,6 +74,6 @@
+     LIBS_windows := dbgeng.lib $(WIN_JAVA_LIB), \
+ ))
+ 
+-TARGETS += $(BUILD_LIBSA)
++# TARGETS += $(BUILD_LIBSA)
+ 
+ ################################################################################
 Index: src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP

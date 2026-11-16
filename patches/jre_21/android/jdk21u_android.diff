@@ -917,6 +917,22 @@ diff --git a/src/java.base/unix/native/libjava/java_props_md.c b/src/java.base/u
  #if defined(_ALLBSD_SOURCE)
  #if !defined(P_tmpdir)
  #include <paths.h>
+Index: make/modules/jdk.hotspot.agent/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/jdk.hotspot.agent/Lib.gmk b/make/modules/jdk.hotspot.agent/Lib.gmk
+--- a/make/modules/jdk.hotspot.agent/Lib.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/modules/jdk.hotspot.agent/Lib.gmk	(date 1794791039467)
+@@ -76,6 +76,6 @@
+     LIBS_windows := dbgeng.lib $(WIN_JAVA_LIB), \
+ ))
+ 
+-TARGETS += $(BUILD_LIBSA)
++# TARGETS += $(BUILD_LIBSA)
+ 
+ ################################################################################
 Index: src/hotspot/os_cpu/linux_x86/os_linux_x86.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
