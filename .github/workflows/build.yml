@@ -103,7 +103,7 @@ jobs:
     strategy:
       matrix:
         #version: [8, 17, 21, 25]
-        version: [25]
+        version: [17, 21, 25]
       fail-fast: false
     steps:
       - name: Checkout repository
