@@ -2423,7 +2423,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.cpp
 --- a/src/hotspot/os/posix/os_posix.cpp	(revision 6c48f4ed707bf0b15f9b6098de30db8aae6fa40f)
-+++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794528560333)
++++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794901410493)
 @@ -83,7 +83,9 @@
  #include <sys/wait.h>
  #include <time.h>
@@ -2450,7 +2450,23 @@ diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.c
  }
  
  static void print_rlimit(outputStream* st, const char* msg,
-@@ -1279,7 +1283,7 @@
+@@ -932,11 +936,15 @@
+ }
+ 
+ void os::exit(int num) {
++#ifndef __ANDROID__
+   permit_forbidden_function::exit(num);
++#endif
+ }
+ 
+ void os::_exit(int num) {
++#ifndef __ANDROID__
+   permit_forbidden_function::_exit(num);
++#endif
+ }
+ 
+ void os::naked_yield() {
+@@ -1279,7 +1287,7 @@
  // Determine what POSIX API's are present and do appropriate
  // configuration.
  void os::Posix::init(void) {
@@ -2459,7 +2475,7 @@ diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.c
    clock_tics_per_sec = CLK_TCK;
  #else
    clock_tics_per_sec = checked_cast<int>(sysconf(_SC_CLK_TCK));
-@@ -1998,11 +2002,31 @@
+@@ -1998,11 +2006,31 @@
    const char* argv[4] = {"sh", "-c", cmd, nullptr};
    pid_t pid = -1;
    char** env = os::get_environ();
@@ -2491,7 +2507,7 @@ diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.c
      int status;
      // Wait for the child process to exit.  This returns immediately if
      // the child has already exited. */
-@@ -2027,9 +2051,11 @@
+@@ -2027,9 +2055,11 @@
        // Unknown exit code; pass it through
        return status;
      }
