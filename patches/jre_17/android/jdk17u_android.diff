@@ -222,7 +222,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.cpp
 --- a/src/hotspot/os/posix/os_posix.cpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794901052613)
++++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794730015506)
 @@ -65,7 +65,9 @@
  #include <sys/wait.h>
  #include <time.h>
@@ -249,16 +249,6 @@ diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.c
  }
  
  static void print_rlimit(outputStream* st, const char* msg,
-@@ -723,7 +727,9 @@
- }
- 
- void os::exit(int num) {
-+#ifndef __ANDROID__
-   ::exit(num);
-+#endif
- }
- 
- // Builds a platform dependent Agent_OnLoad_<lib_name> function name
 Index: src/hotspot/os_cpu/linux_aarch64/thread_linux_aarch64.hpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
