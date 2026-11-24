@@ -222,7 +222,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.cpp
 --- a/src/hotspot/os/posix/os_posix.cpp	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
-+++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794730015506)
++++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794903763674)
 @@ -65,7 +65,9 @@
  #include <sys/wait.h>
  #include <time.h>
@@ -723,6 +723,23 @@ diff --git a/make/modules/java.instrument/Lib.gmk b/make/modules/java.instrument
      CFLAGS := $(CFLAGS_JDKLIB) $(LIBINSTRUMENT_CFLAGS), \
      CFLAGS_debug := -DJPLIS_LOGGING, \
      CFLAGS_release := -DNO_JPLIS_LOGGING, \
+Index: make/modules/java.desktop/lib/Awt2dLibraries.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/java.desktop/lib/Awt2dLibraries.gmk b/make/modules/java.desktop/lib/Awt2dLibraries.gmk
+--- a/make/modules/java.desktop/lib/Awt2dLibraries.gmk	(revision dfacda488bfbe2e11e8d607a6d08527710286982)
++++ b/make/modules/java.desktop/lib/Awt2dLibraries.gmk	(date 1795486014541)
+@@ -527,7 +527,7 @@
+     LDFLAGS_unix := -L$(INSTALL_LIBRARIES_HERE), \
+     LDFLAGS_aix := -Wl$(COMMA)-berok, \
+     LIBS := $(BUILD_LIBFONTMANAGER_FONTLIB), \
+-    LIBS_unix := -lawt -ljava -ljvm $(LIBM) $(LIBCXX), \
++    LIBS_unix := -lawt -lawt_headless -ljava -ljvm $(LIBM) $(LIBCXX), \
+     LIBS_macosx := -lawt_lwawt -framework CoreText -framework CoreFoundation -framework CoreGraphics, \
+     LIBS_windows := $(WIN_JAVA_LIB) advapi32.lib user32.lib gdi32.lib \
+         $(WIN_AWT_LIB), \
 Index: make/modules/java.desktop/Lib.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP

@@ -1,158 +1,5 @@
 Subject: [PATCH] jdk21u_android
 ---
-Index: make/autoconf/platform.m4
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/autoconf/platform.m4 b/make/autoconf/platform.m4
---- a/make/autoconf/platform.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/autoconf/platform.m4	(date 1794729048405)
-@@ -202,6 +202,10 @@
-       VAR_OS=linux
-       VAR_OS_TYPE=unix
-       ;;
-+    *android*)
-+      VAR_OS=linux
-+      VAR_OS_TYPE=unix
-+      ;;
-     *darwin*)
-       VAR_OS=macosx
-       VAR_OS_TYPE=unix
-Index: src/java.base/unix/native/libjli/java_md.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/native/libjli/java_md.c
---- a/src/java.base/unix/native/libjli/java_md.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/java.base/unix/native/libjli/java_md.c	(date 1794735013256)
-@@ -463,12 +463,46 @@
- }
- 
- 
-+#ifdef __ANDROID__
-+#include <sys/system_properties.h>
-+
-+static int
-+AndroidDeviceApiLevel(void)
-+{
-+    char v[PROP_VALUE_MAX] = {0};
-+    return __system_property_get("ro.build.version.sdk", v) > 0 ? atoi(v) : 0;
-+}
-+
-+static const char *
-+AndroidSelectJvmType(const char *jdkroot, const char *jvmtype)
-+{
-+    char legacy[PATH_MAX + 1];
-+    struct stat s;
-+    const char *force = getenv("JDK_ANDROID_FORCE_LEGACY_JVM");
-+    int api = AndroidDeviceApiLevel();
-+
-+    if (JLI_StrCmp(jvmtype, "server") == 0 &&
-+        ((force != NULL && force[0] == '1') || api < 29)) {
-+        JLI_Snprintf(legacy, sizeof(legacy), "%s/lib/server-legacy/" JVM_DLL, jdkroot);
-+        if (stat(legacy, &s) == 0) {
-+            jvmtype = "server-legacy";
-+        }
-+    }
-+    JLI_TraceLauncher("Android API %d -> jvmtype %s\n", api, jvmtype);
-+    return jvmtype;
-+}
-+#endif
-+
- static jboolean
- GetJVMPath(const char *jrepath, const char *jvmtype,
-            char *jvmpath, jint jvmpathsize)
- {
-     struct stat s;
- 
-+#ifdef __ANDROID__
-+    jvmtype = AndroidSelectJvmType(jrepath, jvmtype);
-+#endif
-+
-     if (JLI_StrChr(jvmtype, '/')) {
-         JLI_Snprintf(jvmpath, jvmpathsize, "%s/" JVM_DLL, jvmtype);
-     } else {
-@@ -584,7 +618,46 @@
- SetExecname(char **argv)
- {
-     char* exec_path = NULL;
--#if defined(__linux__)
-+#if defined(__ANDROID__)
-+    char *__java_home = getenv("JAVA_HOME");
-+        char buf[PATH_MAX+1];
-+        char *p = NULL;
-+        if ((p = JLI_StrRChr(argv[0], '/')) != 0) {
-+          p++;
-+          if ((JLI_StrLen(p) == 4) && JLI_StrCmp(p, "java") == 0) {
-+            JLI_TraceLauncher("SetExecName maybe command line = %s\n", argv[0]);
-+            if (*argv[0] != '/') {
-+              char *curdir = NULL;
-+              /* get absolute path */
-+              getcwd(buf, PATH_MAX);
-+              curdir = JLI_StringDup(buf);
-+              JLI_Snprintf(buf, PATH_MAX, "%s/%s", curdir, argv[0]);
-+              JLI_MemFree(curdir);
-+            } else {
-+              JLI_Snprintf(buf, PATH_MAX, "%s", argv[0]);
-+            }
-+          } else {
-+            if (__java_home != NULL) {
-+              JLI_TraceLauncher("SetExecName not java = %s\n", __java_home);
-+              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
-+            } else {
-+              JLI_TraceLauncher("SetExecName fake it = %s\n", argv[0]);
-+              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
-+                           argv[0]);
-+            }
-+          }
-+        } else {
-+            if (__java_home != NULL) {
-+              JLI_TraceLauncher("SetExecName not command line = %s\n", __java_home);
-+              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
-+            } else {
-+              JLI_TraceLauncher("SetExecName fake it 2 = %s\n", argv[0]);
-+              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
-+                           argv[0]);
-+            }
-+        }
-+        exec_path = JLI_StringDup(buf);
-+#elif defined(__linux__)
-     {
-         const char* self = "/proc/self/exe";
-         char buf[PATH_MAX+1];
-@@ -594,10 +667,6 @@
-             exec_path = JLI_StringDup(buf);
-         }
-     }
--#else /* !__linux__ */
--    {
--        /* Not implemented */
--    }
- #endif
- 
-     if (exec_path == NULL) {
-Index: src/hotspot/os/linux/gc/z/zNUMA_linux.cpp
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp
---- a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(date 1794729152559)
-@@ -31,7 +31,11 @@
- #include "utilities/debug.hpp"
- 
- void ZNUMA::pd_initialize() {
-+#ifndef __ANDROID__
-   _enabled = UseNUMA;
-+#else
-+  _enabled = false;
-+#endif
- }
- 
- uint32_t ZNUMA::count() {
 Index: src/hotspot/share/utilities/elfFile.hpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -183,24 +30,6 @@ diff --git a/src/hotspot/share/utilities/elfFile.hpp b/src/hotspot/share/utiliti
  #define ELF_ST_TYPE ELF32_ST_TYPE
  #endif
  #endif
-Index: make/autoconf/lib-freetype.m4
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/autoconf/lib-freetype.m4 b/make/autoconf/lib-freetype.m4
---- a/make/autoconf/lib-freetype.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/autoconf/lib-freetype.m4	(date 1794729048381)
-@@ -103,7 +103,8 @@
-   FREETYPE_TO_USE=bundled
-   if test "x$OPENJDK_TARGET_OS" != "xwindows" && \
-       test "x$OPENJDK_TARGET_OS" != "xmacosx" && \
--      test "x$OPENJDK_TARGET_OS" != "xaix"; then
-+      test "x$OPENJDK_TARGET_OS" != "xaix" && \
-+      test "x$OPENJDK_TARGET_OS" != "xandroid"; then
-     FREETYPE_TO_USE=system
-   fi
-   if test "x$with_freetype" != "x" ; then
 Index: make/common/Modules.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -266,327 +95,6 @@ diff --git a/src/hotspot/os_cpu/linux_arm/os_linux_arm.cpp b/src/hotspot/os_cpu/
      : /* no output */ : /* no input */ : "r0"
    );
  #endif
-Index: src/hotspot/os/linux/os_perf_linux.cpp
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/hotspot/os/linux/os_perf_linux.cpp b/src/hotspot/os/linux/os_perf_linux.cpp
---- a/src/hotspot/os/linux/os_perf_linux.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/hotspot/os/linux/os_perf_linux.cpp	(date 1794729198286)
-@@ -45,9 +45,312 @@
- #include <dlfcn.h>
- #include <pthread.h>
- #include <limits.h>
-+#ifndef __ANDROID__
- #include <ifaddrs.h>
-+#else
-+#include <sys/cdefs.h>
-+#include <netinet/in.h>
-+#include <sys/socket.h>
-+#include <linux/if_packet.h>
-+#include <linux/netlink.h>
-+#include <linux/rtnetlink.h>
-+#include <net/if.h>
-+#include <stdint.h>
-+#endif
- #include <fcntl.h>
- 
-+#ifdef __ANDROID__
-+/*
-+ * Copyright (C) 2015 The Android Open Source Project
-+ * All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ *  * Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ *  * Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in
-+ *    the documentation and/or other materials provided with the
-+ *    distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
-+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-+ * SUCH DAMAGE.
-+ */
-+
-+__BEGIN_DECLS
-+
-+/**
-+ * Returned by getifaddrs() and freed by freeifaddrs().
-+ */
-+struct ifaddrs {
-+  /** Pointer to the next element in the linked list. */
-+  struct ifaddrs* ifa_next;
-+
-+  /** Interface name. */
-+  char* ifa_name;
-+
-+  /** Interface flags (like `SIOCGIFFLAGS`). */
-+  unsigned int ifa_flags;
-+
-+  /** Interface address. */
-+  struct sockaddr* ifa_addr;
-+
-+  /** Interface netmask. */
-+  struct sockaddr* ifa_netmask;
-+
-+  union {
-+    /** Interface broadcast address (if IFF_BROADCAST is set). */
-+    struct sockaddr* ifu_broadaddr;
-+
-+    /** Interface destination address (if IFF_POINTOPOINT is set). */
-+    struct sockaddr* ifu_dstaddr;
-+  } ifa_ifu;
-+
-+  /** Unused. */
-+  void* ifa_data;
-+};
-+
-+/** Synonym for `ifa_ifu.ifu_broadaddr` in `struct ifaddrs`. */
-+#define ifa_broadaddr ifa_ifu.ifu_broadaddr
-+
-+/** Synonym for `ifa_ifu.ifu_dstaddr` in `struct ifaddrs`. */
-+#define ifa_dstaddr ifa_ifu.ifu_dstaddr
-+
-+/**
-+ * [getifaddrs(3)](http://man7.org/linux/man-pages/man3/getifaddrs.3.html) creates a linked list
-+ * of `struct ifaddrs`. The list must be freed by freeifaddrs().
-+ *
-+ * Returns 0 and stores the list in `*__list_ptr` on success,
-+ * and returns -1 and sets `errno` on failure.
-+ *
-+ * Available since API level 24.
-+ */
-+int getifaddrs(struct ifaddrs** __list_ptr); // __INTRODUCED_IN(24);
-+
-+/**
-+ * [freeifaddrs(3)](http://man7.org/linux/man-pages/man3/freeifaddrs.3.html) frees a linked list
-+ * of `struct ifaddrs` returned by getifaddrs().
-+ *
-+ * Available since API level 24.
-+ */
-+void freeifaddrs(struct ifaddrs* __ptr); // __INTRODUCED_IN(24);
-+
-+__END_DECLS
-+
-+#define nullptr 0
-+
-+// The public ifaddrs struct is full of pointers. Rather than track several
-+// different allocations, we use a maximally-sized structure with the public
-+// part at offset 0, and pointers into its hidden tail.
-+struct ifaddrs_storage {
-+  // Must come first, so that `ifaddrs_storage` is-a `ifaddrs`.
-+  ifaddrs ifa;
-+  // The interface index, so we can match RTM_NEWADDR messages with
-+  // earlier RTM_NEWLINK messages (to copy the interface flags).
-+  int interface_index;
-+  // Storage for the pointers in `ifa`.
-+  sockaddr_storage addr;
-+  sockaddr_storage netmask;
-+  sockaddr_storage ifa_ifu;
-+  char name[IFNAMSIZ + 1];
-+  // Netlink gives us the address family in the header, and the
-+  // sockaddr_in or sockaddr_in6 bytes as the payload. We need to
-+  // stitch the two bits together into the sockaddr that's part of
-+  // our portable interface.
-+  void SetAddress(int family, const void* data, size_t byteCount) {
-+      addr.ss_family = family;
-+      memcpy(SockaddrBytes(family, &addr), data, byteCount);
-+      ifa.ifa_addr = reinterpret_cast<sockaddr*>(&addr);
-+  }
-+  void SetBroadcastAddress(int family, const void* data, size_t byteCount) {
-+      ifa_ifu.ss_family = family;
-+      memcpy(SockaddrBytes(family, &ifa_ifu), data, byteCount);
-+      ifa.ifa_dstaddr = reinterpret_cast<sockaddr*>(&ifa_ifu);
-+  }
-+  // Netlink gives us the prefix length as a bit count. We need to turn
-+  // that into a BSD-compatible netmask represented by a sockaddr*.
-+  void SetNetmask(int family, size_t prefix_length) {
-+      // ...and work out the netmask from the prefix length.
-+      netmask.ss_family = family;
-+      uint8_t* dst = SockaddrBytes(family, &netmask);
-+      memset(dst, 0xff, prefix_length / 8);
-+      if ((prefix_length % 8) != 0) {
-+        dst[prefix_length/8] = (0xff << (8 - (prefix_length % 8)));
-+      }
-+      ifa.ifa_netmask = reinterpret_cast<sockaddr*>(&netmask);
-+  }
-+  void SetPacketAttributes(int ifindex, unsigned short hatype, unsigned char halen) {
-+    sockaddr_ll* sll = reinterpret_cast<sockaddr_ll*>(&addr);
-+    sll->sll_ifindex = ifindex;
-+    sll->sll_hatype = hatype;
-+    sll->sll_halen = halen;
-+  }
-+ private:
-+  // Returns a pointer to the first byte in the address data (which is
-+  // stored in network byte order).
-+  uint8_t* SockaddrBytes(int family, sockaddr_storage* ss) {
-+    if (family == AF_INET) {
-+      sockaddr_in* ss4 = reinterpret_cast<sockaddr_in*>(ss);
-+      return reinterpret_cast<uint8_t*>(&ss4->sin_addr);
-+    } else if (family == AF_INET6) {
-+      sockaddr_in6* ss6 = reinterpret_cast<sockaddr_in6*>(ss);
-+      return reinterpret_cast<uint8_t*>(&ss6->sin6_addr);
-+    } else if (family == AF_PACKET) {
-+      sockaddr_ll* sll = reinterpret_cast<sockaddr_ll*>(ss);
-+      return reinterpret_cast<uint8_t*>(&sll->sll_addr);
-+    }
-+    return nullptr;
-+  }
-+};
-+ifaddrs_storage* new_ifaddrs_storage(ifaddrs** list) {
-+  ifaddrs_storage *storage = nullptr;
-+  memset(storage, 0, sizeof(*storage));
-+  // push_front onto `list`.
-+  storage->ifa.ifa_next = *list;
-+  *list = reinterpret_cast<ifaddrs*>(storage);
-+  return storage;
-+}
-+#if !defined(__clang__)
-+// GCC gets confused by NLMSG_DATA and doesn't realize that the old-style
-+// cast is from a system header and should be ignored.
-+#pragma GCC diagnostic ignored "-Wold-style-cast"
-+#endif
-+static void __handle_netlink_response(ifaddrs** out, nlmsghdr* hdr) {
-+  if (hdr->nlmsg_type == RTM_NEWLINK) {
-+    ifinfomsg* ifi = reinterpret_cast<ifinfomsg*>(NLMSG_DATA(hdr));
-+    // Create a new ifaddr entry, and set the interface index and flags.
-+    ifaddrs_storage* new_addr = new_ifaddrs_storage(out);
-+    new_addr->interface_index = ifi->ifi_index;
-+    new_addr->ifa.ifa_flags = ifi->ifi_flags;
-+    // Go through the various bits of information and find the name.
-+    rtattr* rta = IFLA_RTA(ifi);
-+    size_t rta_len = IFLA_PAYLOAD(hdr);
-+    while (RTA_OK(rta, rta_len)) {
-+      if (rta->rta_type == IFLA_ADDRESS) {
-+          if (RTA_PAYLOAD(rta) < sizeof(new_addr->addr)) {
-+            new_addr->SetAddress(AF_PACKET, RTA_DATA(rta), RTA_PAYLOAD(rta));
-+            new_addr->SetPacketAttributes(ifi->ifi_index, ifi->ifi_type, RTA_PAYLOAD(rta));
-+          }
-+      } else if (rta->rta_type == IFLA_BROADCAST) {
-+          if (RTA_PAYLOAD(rta) < sizeof(new_addr->ifa_ifu)) {
-+            new_addr->SetBroadcastAddress(AF_PACKET, RTA_DATA(rta), RTA_PAYLOAD(rta));
-+            new_addr->SetPacketAttributes(ifi->ifi_index, ifi->ifi_type, RTA_PAYLOAD(rta));
-+          }
-+      } else if (rta->rta_type == IFLA_IFNAME) {
-+          if (RTA_PAYLOAD(rta) < sizeof(new_addr->name)) {
-+            memcpy(new_addr->name, RTA_DATA(rta), RTA_PAYLOAD(rta));
-+            new_addr->ifa.ifa_name = new_addr->name;
-+          }
-+      }
-+      rta = RTA_NEXT(rta, rta_len);
-+    }
-+  } else if (hdr->nlmsg_type == RTM_NEWADDR) {
-+    ifaddrmsg* msg = reinterpret_cast<ifaddrmsg*>(NLMSG_DATA(hdr));
-+    // We should already know about this from an RTM_NEWLINK message.
-+    const ifaddrs_storage* addr = reinterpret_cast<const ifaddrs_storage*>(*out);
-+    while (addr != nullptr && addr->interface_index != static_cast<int>(msg->ifa_index)) {
-+      addr = reinterpret_cast<const ifaddrs_storage*>(addr->ifa.ifa_next);
-+    }
-+    // If this is an unknown interface, ignore whatever we're being told about it.
-+    if (addr == nullptr) return;
-+    // Create a new ifaddr entry and copy what we already know.
-+    ifaddrs_storage* new_addr = new_ifaddrs_storage(out);
-+    // We can just copy the name rather than look for IFA_LABEL.
-+    strcpy(new_addr->name, addr->name);
-+    new_addr->ifa.ifa_name = new_addr->name;
-+    new_addr->ifa.ifa_flags = addr->ifa.ifa_flags;
-+    new_addr->interface_index = addr->interface_index;
-+    // Go through the various bits of information and find the address
-+    // and any broadcast/destination address.
-+    rtattr* rta = IFA_RTA(msg);
-+    size_t rta_len = IFA_PAYLOAD(hdr);
-+    while (RTA_OK(rta, rta_len)) {
-+      if (rta->rta_type == IFA_ADDRESS) {
-+        if (msg->ifa_family == AF_INET || msg->ifa_family == AF_INET6) {
-+          new_addr->SetAddress(msg->ifa_family, RTA_DATA(rta), RTA_PAYLOAD(rta));
-+          new_addr->SetNetmask(msg->ifa_family, msg->ifa_prefixlen);
-+        }
-+      } else if (rta->rta_type == IFA_BROADCAST) {
-+        if (msg->ifa_family == AF_INET || msg->ifa_family == AF_INET6) {
-+          new_addr->SetBroadcastAddress(msg->ifa_family, RTA_DATA(rta), RTA_PAYLOAD(rta));
-+        }
-+      }
-+      rta = RTA_NEXT(rta, rta_len);
-+    }
-+  }
-+}
-+static bool __send_netlink_request(int fd, int type) {
-+  struct NetlinkMessage {
-+    nlmsghdr hdr;
-+    rtgenmsg msg;
-+  } request;
-+  memset(&request, 0, sizeof(request));
-+  request.hdr.nlmsg_flags = NLM_F_DUMP | NLM_F_REQUEST;
-+  request.hdr.nlmsg_type = type;
-+  request.hdr.nlmsg_len = sizeof(request);
-+  request.msg.rtgen_family = AF_UNSPEC; // All families.
-+  return (TEMP_FAILURE_RETRY(send(fd, &request, sizeof(request), 0)) == sizeof(request));
-+}
-+static bool __read_netlink_responses(int fd, ifaddrs** out, char* buf, size_t buf_len) {
-+  ssize_t bytes_read;
-+  // Read through all the responses, handing interesting ones to __handle_netlink_response.
-+  while ((bytes_read = TEMP_FAILURE_RETRY(recv(fd, buf, buf_len, 0))) > 0) {
-+    nlmsghdr* hdr = reinterpret_cast<nlmsghdr*>(buf);
-+    for (; NLMSG_OK(hdr, static_cast<size_t>(bytes_read)); hdr = NLMSG_NEXT(hdr, bytes_read)) {
-+      if (hdr->nlmsg_type == NLMSG_DONE) return true;
-+      if (hdr->nlmsg_type == NLMSG_ERROR) return false;
-+      __handle_netlink_response(out, hdr);
-+    }
-+  }
-+  // We only get here if recv fails before we see a NLMSG_DONE.
-+  return false;
-+}
-+int getifaddrs(ifaddrs** out) {
-+  // Make cleanup easy.
-+  *out = nullptr;
-+  // The kernel keeps packets under 8KiB (NLMSG_GOODSIZE),
-+  // but that's a bit too large to go on the stack.
-+  size_t buf_len = 8192;
-+  char* buf = NEW_C_HEAP_ARRAY(char, buf_len, mtInternal);
-+  if (buf == nullptr) return -1;
-+  // Open the netlink socket and ask for all the links and addresses.
-+  int fd = socket(PF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
-+  bool okay = fd != -1 &&
-+      __send_netlink_request(fd, RTM_GETLINK) && __read_netlink_responses(fd, out, buf, buf_len) &&
-+      __send_netlink_request(fd, RTM_GETADDR) && __read_netlink_responses(fd, out, buf, buf_len);
-+  if (!okay) {
-+    freeifaddrs(*out);
-+    // Ensure that callers crash if they forget to check for success.
-+    *out = nullptr;
-+  }
-+  {
-+    int saved_errno = errno;
-+    close(fd);
-+    FREE_C_HEAP_ARRAY(char, buf);
-+    errno = saved_errno;
-+  }
-+  return okay ? 0 : -1;
-+}
-+void freeifaddrs(ifaddrs* list) {
-+  while (list != nullptr) {
-+    ifaddrs* current = list;
-+    list = list->ifa_next;
-+    free(current);
-+  }
-+}
-+#endif
-+
- /**
-    /proc/[number]/stat
-               Status information about the process.  This is used by ps(1).  It is defined in /usr/src/linux/fs/proc/array.c.
 Index: make/modules/java.instrument/Lib.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -624,42 +132,6 @@ diff --git a/make/common/JdkNativeCompilation.gmk b/make/common/JdkNativeCompila
  FindSrcDirsForComponent += \
    $(call uniq, $(wildcard \
        $(TOPDIR)/src/$(strip $1)/$(OPENJDK_TARGET_OS)/native/$(strip $2) \
-Index: src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java b/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java
---- a/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java	(date 1794729236185)
-@@ -63,8 +63,9 @@
-         ArrayList<String> ll = new ArrayList<>();
- 
-         try {
-+            String resolvPath = System.getProperty("ext.net.resolvPath", "/etc/resolv.conf");
-             BufferedReader in =
--                new BufferedReader(new FileReader("/etc/resolv.conf"));
-+                new BufferedReader(new FileReader(resolvPath));
-             String line;
-             while ((line = in.readLine()) != null) {
-                 int maxvalues = maxperkeyword;
-Index: src/hotspot/cpu/arm/icache_arm.cpp
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/hotspot/cpu/arm/icache_arm.cpp b/src/hotspot/cpu/arm/icache_arm.cpp
---- a/src/hotspot/cpu/arm/icache_arm.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/hotspot/cpu/arm/icache_arm.cpp	(date 1794729118075)
-@@ -31,7 +31,7 @@
- 
- 
- static int icache_flush(address addr, int lines, int magic) {
--  __builtin___clear_cache(addr, addr + (lines << ICache::log2_line_size));
-+  __builtin___clear_cache((char*) addr, (char*) (addr + (lines << ICache::log2_line_size)));
-   return magic;
- }
- 
 Index: src/java.base/unix/native/libjava/posix_spawn.h
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -745,32 +217,6 @@ diff --git a/src/hotspot/cpu/aarch64/macroAssembler_aarch64.cpp b/src/hotspot/cp
  
    protect_return_address();
    push(saved_regs, sp);
-Index: src/java.base/unix/native/libnet/net_util_md.h
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libnet/net_util_md.h b/src/java.base/unix/native/libnet/net_util_md.h
---- a/src/java.base/unix/native/libnet/net_util_md.h	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/java.base/unix/native/libnet/net_util_md.h	(date 1794729236241)
-@@ -26,10 +26,17 @@
- #ifndef NET_UTILS_MD_H
- #define NET_UTILS_MD_H
- 
-+#ifdef __ANDROID__
-+#include <netinet/in.h>
-+#endif
- #include <netdb.h>
- #include <poll.h>
- #include <sys/socket.h>
- 
-+#ifdef __ANDROID__
-+#include <netinet/in.h>
-+#endif
-+
- /************************************************************************
-  * Macros and constants
-  */
 Index: make/modules/java.base/lib/CoreLibraries.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -790,133 +236,6 @@ diff --git a/make/modules/java.base/lib/CoreLibraries.gmk b/make/modules/java.ba
  ##########################################################################################
  
  BUILD_LIBZIP_EXCLUDES :=
-Index: src/hotspot/os/linux/gc/z/zSyscall_linux.cpp
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp b/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp
---- a/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp	(date 1794729152578)
-@@ -36,5 +36,9 @@
- }
- 
- long ZSyscall::get_mempolicy(int* mode, unsigned long* nodemask, unsigned long maxnode, void* addr, unsigned long flags) {
-+#ifdef __ANDROID__
-+  return 0;
-+#else
-   return syscall(SYS_get_mempolicy, mode, nodemask, maxnode, addr, flags);
-+#endif
- }
-Index: src/java.base/unix/native/libjava/java_props_md.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libjava/java_props_md.c b/src/java.base/unix/native/libjava/java_props_md.c
---- a/src/java.base/unix/native/libjava/java_props_md.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/java.base/unix/native/libjava/java_props_md.c	(date 1794729236194)
-@@ -46,6 +46,100 @@
- #include "java_props_macosx.h"
- #endif
- 
-+#ifdef __ANDROID__
-+// From https://android.googlesource.com/platform/bionic/+/master/libc/bionic/langinfo.cpp
-+/*
-+ * Copyright (C) 2016 The Android Open Source Project
-+ * All rights reserved.
-+ *
-+ * Redistribution and use in source and binary forms, with or without
-+ * modification, are permitted provided that the following conditions
-+ * are met:
-+ *  * Redistributions of source code must retain the above copyright
-+ *    notice, this list of conditions and the following disclaimer.
-+ *  * Redistributions in binary form must reproduce the above copyright
-+ *    notice, this list of conditions and the following disclaimer in
-+ *    the documentation and/or other materials provided with the
-+ *    distribution.
-+ *
-+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
-+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-+ * SUCH DAMAGE.
-+ */
-+
-+char* nl_langinfo(nl_item item) {
-+  const char* result = "";
-+  switch (item) {
-+    case CODESET: result = (MB_CUR_MAX == 1) ? "ASCII" : "UTF-8"; break;
-+    case D_T_FMT: result = "%F %T %z"; break;
-+    case D_FMT: result = "%F"; break;
-+    case T_FMT: result = "%T"; break;
-+    case T_FMT_AMPM: result = "%I:%M:%S %p"; break;
-+    case AM_STR: result = "AM"; break;
-+    case PM_STR: result = "PM"; break;
-+    case DAY_1: result = "Sunday"; break;
-+    case DAY_2: result = "Monday"; break;
-+    case DAY_3: result = "Tuesday"; break;
-+    case DAY_4: result = "Wednesday"; break;
-+    case DAY_5: result = "Thursday"; break;
-+    case DAY_6: result = "Friday"; break;
-+    case DAY_7: result = "Saturday"; break;
-+    case ABDAY_1: result = "Sun"; break;
-+    case ABDAY_2: result = "Mon"; break;
-+    case ABDAY_3: result = "Tue"; break;
-+    case ABDAY_4: result = "Wed"; break;
-+    case ABDAY_5: result = "Thu"; break;
-+    case ABDAY_6: result = "Fri"; break;
-+    case ABDAY_7: result = "Sat"; break;
-+    case MON_1: result = "January"; break;
-+    case MON_2: result = "February"; break;
-+    case MON_3: result = "March"; break;
-+    case MON_4: result = "April"; break;
-+    case MON_5: result = "May"; break;
-+    case MON_6: result = "June"; break;
-+    case MON_7: result = "July"; break;
-+    case MON_8: result = "August"; break;
-+    case MON_9: result = "September"; break;
-+    case MON_10: result = "October"; break;
-+    case MON_11: result = "November"; break;
-+    case MON_12: result = "December"; break;
-+    case ABMON_1: result = "Jan"; break;
-+    case ABMON_2: result = "Feb"; break;
-+    case ABMON_3: result = "Mar"; break;
-+    case ABMON_4: result = "Apr"; break;
-+    case ABMON_5: result = "May"; break;
-+    case ABMON_6: result = "Jun"; break;
-+    case ABMON_7: result = "Jul"; break;
-+    case ABMON_8: result = "Aug"; break;
-+    case ABMON_9: result = "Sep"; break;
-+    case ABMON_10: result = "Oct"; break;
-+    case ABMON_11: result = "Nov"; break;
-+    case ABMON_12: result = "Dec"; break;
-+    case ERA: result = ""; break;
-+    case ERA_D_FMT: result = ""; break;
-+    case ERA_D_T_FMT: result = ""; break;
-+    case ERA_T_FMT: result = ""; break;
-+    case ALT_DIGITS: result = ""; break;
-+    case RADIXCHAR: result = "."; break;
-+    case THOUSEP: result = ""; break;
-+    case YESEXPR: result = "^[yY]"; break;
-+    case NOEXPR: result = "^[nN]"; break;
-+    case CRNCYSTR: result = ""; break;
-+    default: break;
-+  }
-+  return (char*) result;
-+}
-+#endif
-+
- #if defined(_ALLBSD_SOURCE)
- #if !defined(P_tmpdir)
- #include <paths.h>
 Index: make/modules/jdk.hotspot.agent/Lib.gmk
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -953,54 +272,6 @@ diff --git a/src/hotspot/os_cpu/linux_x86/os_linux_x86.cpp b/src/hotspot/os_cpu/
  #endif
  
  #ifdef AMD64
-Index: make/autoconf/toolchain.m4
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/autoconf/toolchain.m4 b/make/autoconf/toolchain.m4
---- a/make/autoconf/toolchain.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/autoconf/toolchain.m4	(date 1794729069409)
-@@ -38,7 +38,7 @@
- VALID_TOOLCHAINS_all="gcc clang xlc microsoft"
- 
- # These toolchains are valid on different platforms
--VALID_TOOLCHAINS_linux="gcc clang"
-+VALID_TOOLCHAINS_linux="clang gcc"
- VALID_TOOLCHAINS_macosx="clang"
- VALID_TOOLCHAINS_aix="xlc clang"
- VALID_TOOLCHAINS_windows="microsoft"
-@@ -924,8 +924,8 @@
-         UTIL_REQUIRE_PROGS(BUILD_CC, clang)
-         UTIL_REQUIRE_PROGS(BUILD_CXX, clang++)
-       else
--        UTIL_REQUIRE_PROGS(BUILD_CC, cc gcc)
--        UTIL_REQUIRE_PROGS(BUILD_CXX, CC g++)
-+        UTIL_REQUIRE_PROGS(BUILD_CC, clang gcc)
-+        UTIL_REQUIRE_PROGS(BUILD_CXX, clang++ g++)
-       fi
-       UTIL_LOOKUP_PROGS(BUILD_NM, nm gcc-nm)
-       UTIL_LOOKUP_PROGS(BUILD_AR, ar gcc-ar lib)
-@@ -940,11 +940,14 @@
- 
-     PATH="$OLDPATH"
- 
--    TOOLCHAIN_EXTRACT_COMPILER_VERSION(BUILD_CC, [BuildC])
--    TOOLCHAIN_EXTRACT_COMPILER_VERSION(BUILD_CXX, [BuildC++])
--    TOOLCHAIN_PREPARE_FOR_VERSION_COMPARISONS([BUILD_], [OPENJDK_BUILD_], [build ])
--    TOOLCHAIN_EXTRACT_LD_VERSION(BUILD_LD, [build linker])
--    TOOLCHAIN_PREPARE_FOR_LD_VERSION_COMPARISONS([BUILD_], [OPENJDK_BUILD_])
-+    # xandroid
-+    if test "x$OPENJDK_BUILD_OS" != "xlinux"; then
-+      TOOLCHAIN_EXTRACT_COMPILER_VERSION(BUILD_CC, [BuildC])
-+      TOOLCHAIN_EXTRACT_COMPILER_VERSION(BUILD_CXX, [BuildC++])
-+      TOOLCHAIN_PREPARE_FOR_VERSION_COMPARISONS([BUILD_], [OPENJDK_BUILD_], [build ])
-+      TOOLCHAIN_EXTRACT_LD_VERSION(BUILD_LD, [build linker])
-+      TOOLCHAIN_PREPARE_FOR_LD_VERSION_COMPARISONS([BUILD_], [OPENJDK_BUILD_])
-+    fi
-   else
-     # If we are not cross compiling, use the normal target compilers for
-     # building the build platform executables.
 Index: src/jdk.jdwp.agent/share/native/libjdwp/utf_util.c
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1021,30 +292,6 @@ diff --git a/src/jdk.jdwp.agent/share/native/libjdwp/utf_util.c b/src/jdk.jdwp.a
          }
  
          if (codeset == NULL) {
-Index: src/java.base/unix/native/libnet/net_util_md.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libnet/net_util_md.c b/src/java.base/unix/native/libnet/net_util_md.c
---- a/src/java.base/unix/native/libnet/net_util_md.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/java.base/unix/native/libnet/net_util_md.c	(date 1794729236232)
-@@ -115,6 +115,7 @@
-     SOCKETADDRESS sa;
-     socklen_t sa_len = sizeof(SOCKETADDRESS);
- 
-+#ifndef __ANDROID__  // ANDROID: skip check, see libcore commit ae218d9b
-     fd = socket(AF_INET6, SOCK_STREAM, 0) ;
-     if (fd < 0) {
-         /*
-@@ -145,6 +146,7 @@
-         }
-     }
- #endif
-+#endif  // !defined __ANDROID__
- 
-     /*
-      *  OK we may have the stack available in the kernel,
 Index: src/hotspot/cpu/aarch64/globalDefinitions_aarch64.hpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1065,38 +312,6 @@ diff --git a/src/hotspot/cpu/aarch64/globalDefinitions_aarch64.hpp b/src/hotspot
  #define R18_RESERVED_ONLY(code) code
  #define NOT_R18_RESERVED(code)
  #else
-Index: make/autoconf/flags-cflags.m4
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/autoconf/flags-cflags.m4 b/make/autoconf/flags-cflags.m4
---- a/make/autoconf/flags-cflags.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/autoconf/flags-cflags.m4	(date 1794788880929)
-@@ -66,13 +66,7 @@
-       SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
-       SET_SHARED_LIBRARY_MAPFILE='-Wl,-version-script=[$]1'
- 
--      # arm specific settings
--      if test "x$OPENJDK_TARGET_CPU" = "xarm"; then
--        # '-Wl,-z,origin' isn't used on arm.
--        SET_SHARED_LIBRARY_ORIGIN='-Wl,-rpath,\$$$$ORIGIN[$]1'
--      else
--        SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
--      fi
-+      SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
-     fi
- 
-   elif test "x$TOOLCHAIN_TYPE" = xxlc; then
-@@ -566,7 +560,7 @@
- 
-   # CFLAGS C language level for JDK sources (hotspot only uses C++)
-   if test "x$TOOLCHAIN_TYPE" = xgcc || test "x$TOOLCHAIN_TYPE" = xclang || test "x$TOOLCHAIN_TYPE" = xxlc; then
--    LANGSTD_CFLAGS="-std=c11"
-+    LANGSTD_CFLAGS=""
-   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
-     LANGSTD_CFLAGS="-std:c11"
-   fi
 Index: src/java.base/unix/native/libjava/jni_util_md.c
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1134,72 +349,6 @@ diff --git a/src/java.instrument/unix/native/libinstrument/EncodingSupport_md.c 
      if ( codeset == NULL || codeset[0] == 0 ) {
          UTF_DEBUG(("NO codeset returned by nl_langinfo(CODESET)\n"));
          return;
-Index: src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c b/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c
---- a/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c	(date 1794729345282)
-@@ -30,6 +30,7 @@
- #include <jni.h>
- #include <jni_util.h>
- #include <jvm.h>
-+#include <stdbool.h>
- #include "gdefs.h"
- 
- #include <sys/param.h>
-@@ -98,6 +99,30 @@
-   #define HEADLESS_PATH "/libawt_headless.so"
- #endif
- 
-+static bool read_so_path_from_maps(const char* so_name, char* buf) {
-+  FILE *fp = fopen("/proc/self/maps", "r");
-+
-+  if (!fp) {
-+    return false;
-+  }
-+
-+  char maps_buffer[2048];
-+  while (fgets(maps_buffer, 2048, fp) != NULL) {
-+    if (strstr(maps_buffer, so_name) == NULL) {
-+      continue;
-+    }
-+
-+    char *so_path = strchr(maps_buffer, '/');
-+    so_path[strlen(so_path) - 1] = '\0'; // Cut trailing \n
-+      strcpy(buf,so_path);
-+    fclose(fp);
-+    return true;
-+  }
-+
-+  fclose(fp);
-+  return false;
-+}
-+
- jint
- AWT_OnLoad(JavaVM *vm, void *reserved)
- {
-Index: make/hotspot/gensrc/GensrcAdlc.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/hotspot/gensrc/GensrcAdlc.gmk b/make/hotspot/gensrc/GensrcAdlc.gmk
---- a/make/hotspot/gensrc/GensrcAdlc.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/hotspot/gensrc/GensrcAdlc.gmk	(date 1794729069474)
-@@ -95,6 +95,10 @@
-   # ADLC flags depending on target OS
-   ifeq ($(call isTargetOs, linux), true)
-     ADLCFLAGS += -DLINUX=1 -D_GNU_SOURCE=1
-+    # Android: keep C2 off x18 (shadow call stack), matching R18_RESERVED in hotspot
-+    ifeq ($(HOTSPOT_TARGET_CPU_ARCH), aarch64)
-+      ADLCFLAGS += -DR18_RESERVED
-+    endif
-   else ifeq ($(call isTargetOs, aix), true)
-     ADLCFLAGS += -DAIX=1
-   else ifeq ($(call isTargetOs, macosx), true)
 Index: src/hotspot/os_cpu/linux_aarch64/javaThread_linux_aarch64.hpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1229,50 +378,6 @@ diff --git a/src/hotspot/os_cpu/linux_aarch64/javaThread_linux_aarch64.hpp b/src
 +#endif
  
  #endif // OS_CPU_LINUX_AARCH64_JAVATHREAD_LINUX_AARCH64_HPP
-Index: make/autoconf/libraries.m4
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/autoconf/libraries.m4 b/make/autoconf/libraries.m4
---- a/make/autoconf/libraries.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/autoconf/libraries.m4	(date 1794729048393)
-@@ -42,8 +42,8 @@
- AC_DEFUN_ONCE([LIB_DETERMINE_DEPENDENCIES],
- [
-   # Check if X11 is needed
--  if test "x$OPENJDK_TARGET_OS" = xwindows || test "x$OPENJDK_TARGET_OS" = xmacosx; then
--    # No X11 support on windows or macosx
-+  if test "x$OPENJDK_TARGET_OS" = xwindows || test "x$OPENJDK_TARGET_OS" = xmacosx || test "x$OPENJDK_TARGET_OS" = xandroid; then
-+    # No X11 support on windows, macosx or android
-     NEEDS_LIB_X11=false
-   else
-     # All other instances need X11, even if building headless only, libawt still
-@@ -52,8 +52,8 @@
-   fi
- 
-   # Check if fontconfig is needed
--  if test "x$OPENJDK_TARGET_OS" = xwindows || test "x$OPENJDK_TARGET_OS" = xmacosx; then
--    # No fontconfig support on windows or macosx
-+  if test "x$OPENJDK_TARGET_OS" = xwindows || test "x$OPENJDK_TARGET_OS" = xmacosx || test "x$OPENJDK_TARGET_OS" = xandroid; then
-+    # No fontconfig support on windows, macosx or android
-     NEEDS_LIB_FONTCONFIG=false
-   else
-     # All other instances need fontconfig, even if building headless only,
-@@ -74,12 +74,7 @@
-     NEEDS_LIB_FREETYPE=true
-   fi
- 
--  # Check if alsa is needed
--  if test "x$OPENJDK_TARGET_OS" = xlinux; then
--    NEEDS_LIB_ALSA=true
--  else
--    NEEDS_LIB_ALSA=false
--  fi
-+  NEEDS_LIB_ALSA=false
- 
-   # Check if ffi is needed
-   if HOTSPOT_CHECK_JVM_VARIANT(zero) || test "x$ENABLE_FALLBACK_LINKER" = "xtrue"; then
 Index: src/hotspot/os/posix/os_posix.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1280,7 +385,7 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.cpp
 --- a/src/hotspot/os/posix/os_posix.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/hotspot/os/posix/os_posix.cpp	(date 1794729198301)
++++ b/src/hotspot/os/posix/os_posix.cpp	(date 1795486123091)
 @@ -74,7 +74,9 @@
  #include <sys/wait.h>
  #include <time.h>
@@ -1360,45 +465,6 @@ diff --git a/src/hotspot/os/posix/os_posix.cpp b/src/hotspot/os/posix/os_posix.c
    }
  }
  
-Index: make/hotspot/lib/JvmOverrideFiles.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/hotspot/lib/JvmOverrideFiles.gmk b/make/hotspot/lib/JvmOverrideFiles.gmk
---- a/make/hotspot/lib/JvmOverrideFiles.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/hotspot/lib/JvmOverrideFiles.gmk	(date 1794729069493)
-@@ -62,7 +62,8 @@
- 	#
-   endif
- 
--  ifeq ($(call isTargetCpu, x86), true)
-+  #ifeq ($(call isTargetCpu, x86), true)
-+  ifeq (false, true)
-     # Performance measurements show that by compiling GC related code, we could
-     # significantly reduce the GC pause time on 32 bit Linux/Unix platforms by
-     # compiling without the PIC flag (-fPIC on linux).
-Index: make/hotspot/lib/JvmFlags.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/hotspot/lib/JvmFlags.gmk b/make/hotspot/lib/JvmFlags.gmk
---- a/make/hotspot/lib/JvmFlags.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/hotspot/lib/JvmFlags.gmk	(date 1794729069484)
-@@ -51,6 +51,12 @@
-     -I$(TOPDIR)/src/java.base/share/native/libjimage \
-     #
- 
-+ifeq ($(call isTargetOs, android ios), true)
-+  JVM_CFLAGS_INCLUDES += \
-+    -I$(TOPDIR)/src/hotspot/os/linux \
-+    #
-+endif
-+
- # INCLUDE_SUFFIX_* is only meant for including the proper
- # platform files. Don't use it to guard code. Use the value of
- # HOTSPOT_TARGET_CPU_DEFINE etc. instead.
 Index: src/jdk.hotspot.agent/linux/native/libsaproc/elfmacros.h
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1486,67 +552,6 @@ new file mode 100644
 +extern fpu_control_t __fpu_control;
 +#endif /* __SOFTFP__ */
 +#endif /* _FPU_CONTROL_H */
-Index: src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
---- a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c	(date 1794729278083)
-@@ -177,6 +177,41 @@
- }
- #endif
- 
-+#ifdef __ANDROID__
-+/*
-+ * TODO: Android lacks support for the methods listed below.  In it's place are
-+ * alternatives that use existing Android functionality, but lack reentrant
-+ * support.  Determine if the following are the most suitable alternatives.
-+ *
-+ */
-+int getgrgid_r(gid_t gid, struct group* grp, char* buf, size_t buflen, struct group** result) {
-+
-+  *result = NULL;
-+  errno = 0;
-+  grp = getgrgid(gid);
-+  if (grp == NULL) {
-+        return errno;
-+  }
-+  // buf not used by caller (see below)
-+  *result = grp;
-+  return 0;
-+}
-+
-+int getgrnam_r(const char *name, struct group* grp, char* buf, size_t buflen, struct group** result) {
-+
-+  *result = NULL;
-+  errno = 0;
-+  grp = getgrnam(name);
-+  if (grp == NULL) {
-+        return errno;
-+  }
-+  // buf not used by caller (see below)
-+  *result = grp;
-+  return 0;
-+
-+}
-+#endif
-+
- /**
-  * Call this to throw an internal UnixException when a system/library
-  * call fails
-@@ -703,8 +738,9 @@
- {
-     struct timespec times[2];
-     int err = 0;
-+    struct timespec times2[2];
- 
--    times[0].tv_sec = accessTime / 1000000000;
-+    times[0].tv_sec = times2[0].tv_sec = accessTime / 1000000000;
-     times[0].tv_nsec = accessTime % 1000000000;
- 
-     times[1].tv_sec = modificationTime / 1000000000;
 Index: src/hotspot/os_cpu/linux_x86/fpu_control.h
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -1666,23 +671,6 @@ new file mode 100644
 +extern fpu_control_t __fpu_control;
 +
 +#endif	/* fpu_control.h */
-Index: make/conf/branding.conf
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/conf/branding.conf b/make/conf/branding.conf
---- a/make/conf/branding.conf	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/conf/branding.conf	(date 1794729069463)
-@@ -25,7 +25,7 @@
- 
- LAUNCHER_NAME=openjdk
- PRODUCT_NAME=OpenJDK
--PRODUCT_SUFFIX="Runtime Environment"
-+PRODUCT_SUFFIX="Android Runtime Environment"
- JDK_RC_PLATFORM_NAME=Platform
- COMPANY_NAME=N/A
- HOTSPOT_VM_DISTRO="OpenJDK"
 Index: src/java.base/share/native/libtinyiconv/iconv.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2501,23 +1489,6 @@ diff --git a/make/modules/jdk.jdwp.agent/Lib.gmk b/make/modules/jdk.jdwp.agent/L
      DISABLED_WARNINGS_gcc_SDE.c := unused-function, \
      DISABLED_WARNINGS_clang_error_messages.c := format-nonliteral, \
      DISABLED_WARNINGS_clang_EventRequestImpl.c := self-assign, \
-Index: make/modules/java.desktop/Lib.gmk
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/make/modules/java.desktop/Lib.gmk b/make/modules/java.desktop/Lib.gmk
---- a/make/modules/java.desktop/Lib.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
-+++ b/make/modules/java.desktop/Lib.gmk	(date 1794729075898)
-@@ -76,7 +76,7 @@
- 
-   $(BUILD_LIBJSOUND): $(call FindLib, java.base, java)
- 
--  TARGETS += $(BUILD_LIBJSOUND)
-+  # TARGETS += $(BUILD_LIBJSOUND)
- 
- endif
- 
 Index: src/hotspot/cpu/aarch64/immediate_aarch64.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
@@ -2535,6 +1506,1052 @@ diff --git a/src/hotspot/cpu/aarch64/immediate_aarch64.cpp b/src/hotspot/cpu/aar
      result |= (bits & mask);
    }
    return result;
+Index: make/autoconf/platform.m4
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/autoconf/platform.m4 b/make/autoconf/platform.m4
+--- a/make/autoconf/platform.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/autoconf/platform.m4	(date 1794729048405)
+@@ -202,6 +202,10 @@
+       VAR_OS=linux
+       VAR_OS_TYPE=unix
+       ;;
++    *android*)
++      VAR_OS=linux
++      VAR_OS_TYPE=unix
++      ;;
+     *darwin*)
+       VAR_OS=macosx
+       VAR_OS_TYPE=unix
+Index: src/java.base/unix/native/libjli/java_md.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libjli/java_md.c b/src/java.base/unix/native/libjli/java_md.c
+--- a/src/java.base/unix/native/libjli/java_md.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/java.base/unix/native/libjli/java_md.c	(date 1794735013256)
+@@ -463,12 +463,46 @@
+ }
+ 
+ 
++#ifdef __ANDROID__
++#include <sys/system_properties.h>
++
++static int
++AndroidDeviceApiLevel(void)
++{
++    char v[PROP_VALUE_MAX] = {0};
++    return __system_property_get("ro.build.version.sdk", v) > 0 ? atoi(v) : 0;
++}
++
++static const char *
++AndroidSelectJvmType(const char *jdkroot, const char *jvmtype)
++{
++    char legacy[PATH_MAX + 1];
++    struct stat s;
++    const char *force = getenv("JDK_ANDROID_FORCE_LEGACY_JVM");
++    int api = AndroidDeviceApiLevel();
++
++    if (JLI_StrCmp(jvmtype, "server") == 0 &&
++        ((force != NULL && force[0] == '1') || api < 29)) {
++        JLI_Snprintf(legacy, sizeof(legacy), "%s/lib/server-legacy/" JVM_DLL, jdkroot);
++        if (stat(legacy, &s) == 0) {
++            jvmtype = "server-legacy";
++        }
++    }
++    JLI_TraceLauncher("Android API %d -> jvmtype %s\n", api, jvmtype);
++    return jvmtype;
++}
++#endif
++
+ static jboolean
+ GetJVMPath(const char *jrepath, const char *jvmtype,
+            char *jvmpath, jint jvmpathsize)
+ {
+     struct stat s;
+ 
++#ifdef __ANDROID__
++    jvmtype = AndroidSelectJvmType(jrepath, jvmtype);
++#endif
++
+     if (JLI_StrChr(jvmtype, '/')) {
+         JLI_Snprintf(jvmpath, jvmpathsize, "%s/" JVM_DLL, jvmtype);
+     } else {
+@@ -584,7 +618,46 @@
+ SetExecname(char **argv)
+ {
+     char* exec_path = NULL;
+-#if defined(__linux__)
++#if defined(__ANDROID__)
++    char *__java_home = getenv("JAVA_HOME");
++        char buf[PATH_MAX+1];
++        char *p = NULL;
++        if ((p = JLI_StrRChr(argv[0], '/')) != 0) {
++          p++;
++          if ((JLI_StrLen(p) == 4) && JLI_StrCmp(p, "java") == 0) {
++            JLI_TraceLauncher("SetExecName maybe command line = %s\n", argv[0]);
++            if (*argv[0] != '/') {
++              char *curdir = NULL;
++              /* get absolute path */
++              getcwd(buf, PATH_MAX);
++              curdir = JLI_StringDup(buf);
++              JLI_Snprintf(buf, PATH_MAX, "%s/%s", curdir, argv[0]);
++              JLI_MemFree(curdir);
++            } else {
++              JLI_Snprintf(buf, PATH_MAX, "%s", argv[0]);
++            }
++          } else {
++            if (__java_home != NULL) {
++              JLI_TraceLauncher("SetExecName not java = %s\n", __java_home);
++              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
++            } else {
++              JLI_TraceLauncher("SetExecName fake it = %s\n", argv[0]);
++              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
++                           argv[0]);
++            }
++          }
++        } else {
++            if (__java_home != NULL) {
++              JLI_TraceLauncher("SetExecName not command line = %s\n", __java_home);
++              JLI_Snprintf(buf, PATH_MAX, "%s/bin/java", __java_home);
++            } else {
++              JLI_TraceLauncher("SetExecName fake it 2 = %s\n", argv[0]);
++              JLI_Snprintf(buf, PATH_MAX, "/data/data/%s/storage/jvm/bin/java",
++                           argv[0]);
++            }
++        }
++        exec_path = JLI_StringDup(buf);
++#elif defined(__linux__)
+     {
+         const char* self = "/proc/self/exe";
+         char buf[PATH_MAX+1];
+@@ -594,10 +667,6 @@
+             exec_path = JLI_StringDup(buf);
+         }
+     }
+-#else /* !__linux__ */
+-    {
+-        /* Not implemented */
+-    }
+ #endif
+ 
+     if (exec_path == NULL) {
+Index: src/hotspot/os/linux/gc/z/zNUMA_linux.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp
+--- a/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/hotspot/os/linux/gc/z/zNUMA_linux.cpp	(date 1794729152559)
+@@ -31,7 +31,11 @@
+ #include "utilities/debug.hpp"
+ 
+ void ZNUMA::pd_initialize() {
++#ifndef __ANDROID__
+   _enabled = UseNUMA;
++#else
++  _enabled = false;
++#endif
+ }
+ 
+ uint32_t ZNUMA::count() {
+Index: make/autoconf/lib-freetype.m4
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/autoconf/lib-freetype.m4 b/make/autoconf/lib-freetype.m4
+--- a/make/autoconf/lib-freetype.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/autoconf/lib-freetype.m4	(date 1794729048381)
+@@ -103,7 +103,8 @@
+   FREETYPE_TO_USE=bundled
+   if test "x$OPENJDK_TARGET_OS" != "xwindows" && \
+       test "x$OPENJDK_TARGET_OS" != "xmacosx" && \
+-      test "x$OPENJDK_TARGET_OS" != "xaix"; then
++      test "x$OPENJDK_TARGET_OS" != "xaix" && \
++      test "x$OPENJDK_TARGET_OS" != "xandroid"; then
+     FREETYPE_TO_USE=system
+   fi
+   if test "x$with_freetype" != "x" ; then
+Index: src/hotspot/os/linux/os_perf_linux.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/os/linux/os_perf_linux.cpp b/src/hotspot/os/linux/os_perf_linux.cpp
+--- a/src/hotspot/os/linux/os_perf_linux.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/hotspot/os/linux/os_perf_linux.cpp	(date 1794729198286)
+@@ -45,9 +45,312 @@
+ #include <dlfcn.h>
+ #include <pthread.h>
+ #include <limits.h>
++#ifndef __ANDROID__
+ #include <ifaddrs.h>
++#else
++#include <sys/cdefs.h>
++#include <netinet/in.h>
++#include <sys/socket.h>
++#include <linux/if_packet.h>
++#include <linux/netlink.h>
++#include <linux/rtnetlink.h>
++#include <net/if.h>
++#include <stdint.h>
++#endif
+ #include <fcntl.h>
+ 
++#ifdef __ANDROID__
++/*
++ * Copyright (C) 2015 The Android Open Source Project
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *  * Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ *  * Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in
++ *    the documentation and/or other materials provided with the
++ *    distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
++ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
++ * SUCH DAMAGE.
++ */
++
++__BEGIN_DECLS
++
++/**
++ * Returned by getifaddrs() and freed by freeifaddrs().
++ */
++struct ifaddrs {
++  /** Pointer to the next element in the linked list. */
++  struct ifaddrs* ifa_next;
++
++  /** Interface name. */
++  char* ifa_name;
++
++  /** Interface flags (like `SIOCGIFFLAGS`). */
++  unsigned int ifa_flags;
++
++  /** Interface address. */
++  struct sockaddr* ifa_addr;
++
++  /** Interface netmask. */
++  struct sockaddr* ifa_netmask;
++
++  union {
++    /** Interface broadcast address (if IFF_BROADCAST is set). */
++    struct sockaddr* ifu_broadaddr;
++
++    /** Interface destination address (if IFF_POINTOPOINT is set). */
++    struct sockaddr* ifu_dstaddr;
++  } ifa_ifu;
++
++  /** Unused. */
++  void* ifa_data;
++};
++
++/** Synonym for `ifa_ifu.ifu_broadaddr` in `struct ifaddrs`. */
++#define ifa_broadaddr ifa_ifu.ifu_broadaddr
++
++/** Synonym for `ifa_ifu.ifu_dstaddr` in `struct ifaddrs`. */
++#define ifa_dstaddr ifa_ifu.ifu_dstaddr
++
++/**
++ * [getifaddrs(3)](http://man7.org/linux/man-pages/man3/getifaddrs.3.html) creates a linked list
++ * of `struct ifaddrs`. The list must be freed by freeifaddrs().
++ *
++ * Returns 0 and stores the list in `*__list_ptr` on success,
++ * and returns -1 and sets `errno` on failure.
++ *
++ * Available since API level 24.
++ */
++int getifaddrs(struct ifaddrs** __list_ptr); // __INTRODUCED_IN(24);
++
++/**
++ * [freeifaddrs(3)](http://man7.org/linux/man-pages/man3/freeifaddrs.3.html) frees a linked list
++ * of `struct ifaddrs` returned by getifaddrs().
++ *
++ * Available since API level 24.
++ */
++void freeifaddrs(struct ifaddrs* __ptr); // __INTRODUCED_IN(24);
++
++__END_DECLS
++
++#define nullptr 0
++
++// The public ifaddrs struct is full of pointers. Rather than track several
++// different allocations, we use a maximally-sized structure with the public
++// part at offset 0, and pointers into its hidden tail.
++struct ifaddrs_storage {
++  // Must come first, so that `ifaddrs_storage` is-a `ifaddrs`.
++  ifaddrs ifa;
++  // The interface index, so we can match RTM_NEWADDR messages with
++  // earlier RTM_NEWLINK messages (to copy the interface flags).
++  int interface_index;
++  // Storage for the pointers in `ifa`.
++  sockaddr_storage addr;
++  sockaddr_storage netmask;
++  sockaddr_storage ifa_ifu;
++  char name[IFNAMSIZ + 1];
++  // Netlink gives us the address family in the header, and the
++  // sockaddr_in or sockaddr_in6 bytes as the payload. We need to
++  // stitch the two bits together into the sockaddr that's part of
++  // our portable interface.
++  void SetAddress(int family, const void* data, size_t byteCount) {
++      addr.ss_family = family;
++      memcpy(SockaddrBytes(family, &addr), data, byteCount);
++      ifa.ifa_addr = reinterpret_cast<sockaddr*>(&addr);
++  }
++  void SetBroadcastAddress(int family, const void* data, size_t byteCount) {
++      ifa_ifu.ss_family = family;
++      memcpy(SockaddrBytes(family, &ifa_ifu), data, byteCount);
++      ifa.ifa_dstaddr = reinterpret_cast<sockaddr*>(&ifa_ifu);
++  }
++  // Netlink gives us the prefix length as a bit count. We need to turn
++  // that into a BSD-compatible netmask represented by a sockaddr*.
++  void SetNetmask(int family, size_t prefix_length) {
++      // ...and work out the netmask from the prefix length.
++      netmask.ss_family = family;
++      uint8_t* dst = SockaddrBytes(family, &netmask);
++      memset(dst, 0xff, prefix_length / 8);
++      if ((prefix_length % 8) != 0) {
++        dst[prefix_length/8] = (0xff << (8 - (prefix_length % 8)));
++      }
++      ifa.ifa_netmask = reinterpret_cast<sockaddr*>(&netmask);
++  }
++  void SetPacketAttributes(int ifindex, unsigned short hatype, unsigned char halen) {
++    sockaddr_ll* sll = reinterpret_cast<sockaddr_ll*>(&addr);
++    sll->sll_ifindex = ifindex;
++    sll->sll_hatype = hatype;
++    sll->sll_halen = halen;
++  }
++ private:
++  // Returns a pointer to the first byte in the address data (which is
++  // stored in network byte order).
++  uint8_t* SockaddrBytes(int family, sockaddr_storage* ss) {
++    if (family == AF_INET) {
++      sockaddr_in* ss4 = reinterpret_cast<sockaddr_in*>(ss);
++      return reinterpret_cast<uint8_t*>(&ss4->sin_addr);
++    } else if (family == AF_INET6) {
++      sockaddr_in6* ss6 = reinterpret_cast<sockaddr_in6*>(ss);
++      return reinterpret_cast<uint8_t*>(&ss6->sin6_addr);
++    } else if (family == AF_PACKET) {
++      sockaddr_ll* sll = reinterpret_cast<sockaddr_ll*>(ss);
++      return reinterpret_cast<uint8_t*>(&sll->sll_addr);
++    }
++    return nullptr;
++  }
++};
++ifaddrs_storage* new_ifaddrs_storage(ifaddrs** list) {
++  ifaddrs_storage *storage = nullptr;
++  memset(storage, 0, sizeof(*storage));
++  // push_front onto `list`.
++  storage->ifa.ifa_next = *list;
++  *list = reinterpret_cast<ifaddrs*>(storage);
++  return storage;
++}
++#if !defined(__clang__)
++// GCC gets confused by NLMSG_DATA and doesn't realize that the old-style
++// cast is from a system header and should be ignored.
++#pragma GCC diagnostic ignored "-Wold-style-cast"
++#endif
++static void __handle_netlink_response(ifaddrs** out, nlmsghdr* hdr) {
++  if (hdr->nlmsg_type == RTM_NEWLINK) {
++    ifinfomsg* ifi = reinterpret_cast<ifinfomsg*>(NLMSG_DATA(hdr));
++    // Create a new ifaddr entry, and set the interface index and flags.
++    ifaddrs_storage* new_addr = new_ifaddrs_storage(out);
++    new_addr->interface_index = ifi->ifi_index;
++    new_addr->ifa.ifa_flags = ifi->ifi_flags;
++    // Go through the various bits of information and find the name.
++    rtattr* rta = IFLA_RTA(ifi);
++    size_t rta_len = IFLA_PAYLOAD(hdr);
++    while (RTA_OK(rta, rta_len)) {
++      if (rta->rta_type == IFLA_ADDRESS) {
++          if (RTA_PAYLOAD(rta) < sizeof(new_addr->addr)) {
++            new_addr->SetAddress(AF_PACKET, RTA_DATA(rta), RTA_PAYLOAD(rta));
++            new_addr->SetPacketAttributes(ifi->ifi_index, ifi->ifi_type, RTA_PAYLOAD(rta));
++          }
++      } else if (rta->rta_type == IFLA_BROADCAST) {
++          if (RTA_PAYLOAD(rta) < sizeof(new_addr->ifa_ifu)) {
++            new_addr->SetBroadcastAddress(AF_PACKET, RTA_DATA(rta), RTA_PAYLOAD(rta));
++            new_addr->SetPacketAttributes(ifi->ifi_index, ifi->ifi_type, RTA_PAYLOAD(rta));
++          }
++      } else if (rta->rta_type == IFLA_IFNAME) {
++          if (RTA_PAYLOAD(rta) < sizeof(new_addr->name)) {
++            memcpy(new_addr->name, RTA_DATA(rta), RTA_PAYLOAD(rta));
++            new_addr->ifa.ifa_name = new_addr->name;
++          }
++      }
++      rta = RTA_NEXT(rta, rta_len);
++    }
++  } else if (hdr->nlmsg_type == RTM_NEWADDR) {
++    ifaddrmsg* msg = reinterpret_cast<ifaddrmsg*>(NLMSG_DATA(hdr));
++    // We should already know about this from an RTM_NEWLINK message.
++    const ifaddrs_storage* addr = reinterpret_cast<const ifaddrs_storage*>(*out);
++    while (addr != nullptr && addr->interface_index != static_cast<int>(msg->ifa_index)) {
++      addr = reinterpret_cast<const ifaddrs_storage*>(addr->ifa.ifa_next);
++    }
++    // If this is an unknown interface, ignore whatever we're being told about it.
++    if (addr == nullptr) return;
++    // Create a new ifaddr entry and copy what we already know.
++    ifaddrs_storage* new_addr = new_ifaddrs_storage(out);
++    // We can just copy the name rather than look for IFA_LABEL.
++    strcpy(new_addr->name, addr->name);
++    new_addr->ifa.ifa_name = new_addr->name;
++    new_addr->ifa.ifa_flags = addr->ifa.ifa_flags;
++    new_addr->interface_index = addr->interface_index;
++    // Go through the various bits of information and find the address
++    // and any broadcast/destination address.
++    rtattr* rta = IFA_RTA(msg);
++    size_t rta_len = IFA_PAYLOAD(hdr);
++    while (RTA_OK(rta, rta_len)) {
++      if (rta->rta_type == IFA_ADDRESS) {
++        if (msg->ifa_family == AF_INET || msg->ifa_family == AF_INET6) {
++          new_addr->SetAddress(msg->ifa_family, RTA_DATA(rta), RTA_PAYLOAD(rta));
++          new_addr->SetNetmask(msg->ifa_family, msg->ifa_prefixlen);
++        }
++      } else if (rta->rta_type == IFA_BROADCAST) {
++        if (msg->ifa_family == AF_INET || msg->ifa_family == AF_INET6) {
++          new_addr->SetBroadcastAddress(msg->ifa_family, RTA_DATA(rta), RTA_PAYLOAD(rta));
++        }
++      }
++      rta = RTA_NEXT(rta, rta_len);
++    }
++  }
++}
++static bool __send_netlink_request(int fd, int type) {
++  struct NetlinkMessage {
++    nlmsghdr hdr;
++    rtgenmsg msg;
++  } request;
++  memset(&request, 0, sizeof(request));
++  request.hdr.nlmsg_flags = NLM_F_DUMP | NLM_F_REQUEST;
++  request.hdr.nlmsg_type = type;
++  request.hdr.nlmsg_len = sizeof(request);
++  request.msg.rtgen_family = AF_UNSPEC; // All families.
++  return (TEMP_FAILURE_RETRY(send(fd, &request, sizeof(request), 0)) == sizeof(request));
++}
++static bool __read_netlink_responses(int fd, ifaddrs** out, char* buf, size_t buf_len) {
++  ssize_t bytes_read;
++  // Read through all the responses, handing interesting ones to __handle_netlink_response.
++  while ((bytes_read = TEMP_FAILURE_RETRY(recv(fd, buf, buf_len, 0))) > 0) {
++    nlmsghdr* hdr = reinterpret_cast<nlmsghdr*>(buf);
++    for (; NLMSG_OK(hdr, static_cast<size_t>(bytes_read)); hdr = NLMSG_NEXT(hdr, bytes_read)) {
++      if (hdr->nlmsg_type == NLMSG_DONE) return true;
++      if (hdr->nlmsg_type == NLMSG_ERROR) return false;
++      __handle_netlink_response(out, hdr);
++    }
++  }
++  // We only get here if recv fails before we see a NLMSG_DONE.
++  return false;
++}
++int getifaddrs(ifaddrs** out) {
++  // Make cleanup easy.
++  *out = nullptr;
++  // The kernel keeps packets under 8KiB (NLMSG_GOODSIZE),
++  // but that's a bit too large to go on the stack.
++  size_t buf_len = 8192;
++  char* buf = NEW_C_HEAP_ARRAY(char, buf_len, mtInternal);
++  if (buf == nullptr) return -1;
++  // Open the netlink socket and ask for all the links and addresses.
++  int fd = socket(PF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
++  bool okay = fd != -1 &&
++      __send_netlink_request(fd, RTM_GETLINK) && __read_netlink_responses(fd, out, buf, buf_len) &&
++      __send_netlink_request(fd, RTM_GETADDR) && __read_netlink_responses(fd, out, buf, buf_len);
++  if (!okay) {
++    freeifaddrs(*out);
++    // Ensure that callers crash if they forget to check for success.
++    *out = nullptr;
++  }
++  {
++    int saved_errno = errno;
++    close(fd);
++    FREE_C_HEAP_ARRAY(char, buf);
++    errno = saved_errno;
++  }
++  return okay ? 0 : -1;
++}
++void freeifaddrs(ifaddrs* list) {
++  while (list != nullptr) {
++    ifaddrs* current = list;
++    list = list->ifa_next;
++    free(current);
++  }
++}
++#endif
++
+ /**
+    /proc/[number]/stat
+               Status information about the process.  This is used by ps(1).  It is defined in /usr/src/linux/fs/proc/array.c.
+Index: src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java b/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java
+--- a/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/java.base/unix/classes/sun/net/dns/ResolverConfigurationImpl.java	(date 1794729236185)
+@@ -63,8 +63,9 @@
+         ArrayList<String> ll = new ArrayList<>();
+ 
+         try {
++            String resolvPath = System.getProperty("ext.net.resolvPath", "/etc/resolv.conf");
+             BufferedReader in =
+-                new BufferedReader(new FileReader("/etc/resolv.conf"));
++                new BufferedReader(new FileReader(resolvPath));
+             String line;
+             while ((line = in.readLine()) != null) {
+                 int maxvalues = maxperkeyword;
+Index: src/hotspot/cpu/arm/icache_arm.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/cpu/arm/icache_arm.cpp b/src/hotspot/cpu/arm/icache_arm.cpp
+--- a/src/hotspot/cpu/arm/icache_arm.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/hotspot/cpu/arm/icache_arm.cpp	(date 1794729118075)
+@@ -31,7 +31,7 @@
+ 
+ 
+ static int icache_flush(address addr, int lines, int magic) {
+-  __builtin___clear_cache(addr, addr + (lines << ICache::log2_line_size));
++  __builtin___clear_cache((char*) addr, (char*) (addr + (lines << ICache::log2_line_size)));
+   return magic;
+ }
+ 
+Index: src/java.base/unix/native/libnet/net_util_md.h
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libnet/net_util_md.h b/src/java.base/unix/native/libnet/net_util_md.h
+--- a/src/java.base/unix/native/libnet/net_util_md.h	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/java.base/unix/native/libnet/net_util_md.h	(date 1794729236241)
+@@ -26,10 +26,17 @@
+ #ifndef NET_UTILS_MD_H
+ #define NET_UTILS_MD_H
+ 
++#ifdef __ANDROID__
++#include <netinet/in.h>
++#endif
+ #include <netdb.h>
+ #include <poll.h>
+ #include <sys/socket.h>
+ 
++#ifdef __ANDROID__
++#include <netinet/in.h>
++#endif
++
+ /************************************************************************
+  * Macros and constants
+  */
+Index: src/hotspot/os/linux/gc/z/zSyscall_linux.cpp
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp b/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp
+--- a/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/hotspot/os/linux/gc/z/zSyscall_linux.cpp	(date 1794729152578)
+@@ -36,5 +36,9 @@
+ }
+ 
+ long ZSyscall::get_mempolicy(int* mode, unsigned long* nodemask, unsigned long maxnode, void* addr, unsigned long flags) {
++#ifdef __ANDROID__
++  return 0;
++#else
+   return syscall(SYS_get_mempolicy, mode, nodemask, maxnode, addr, flags);
++#endif
+ }
+Index: src/java.base/unix/native/libjava/java_props_md.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libjava/java_props_md.c b/src/java.base/unix/native/libjava/java_props_md.c
+--- a/src/java.base/unix/native/libjava/java_props_md.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/java.base/unix/native/libjava/java_props_md.c	(date 1794729236194)
+@@ -46,6 +46,100 @@
+ #include "java_props_macosx.h"
+ #endif
+ 
++#ifdef __ANDROID__
++// From https://android.googlesource.com/platform/bionic/+/master/libc/bionic/langinfo.cpp
++/*
++ * Copyright (C) 2016 The Android Open Source Project
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *  * Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ *  * Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in
++ *    the documentation and/or other materials provided with the
++ *    distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
++ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
++ * SUCH DAMAGE.
++ */
++
++char* nl_langinfo(nl_item item) {
++  const char* result = "";
++  switch (item) {
++    case CODESET: result = (MB_CUR_MAX == 1) ? "ASCII" : "UTF-8"; break;
++    case D_T_FMT: result = "%F %T %z"; break;
++    case D_FMT: result = "%F"; break;
++    case T_FMT: result = "%T"; break;
++    case T_FMT_AMPM: result = "%I:%M:%S %p"; break;
++    case AM_STR: result = "AM"; break;
++    case PM_STR: result = "PM"; break;
++    case DAY_1: result = "Sunday"; break;
++    case DAY_2: result = "Monday"; break;
++    case DAY_3: result = "Tuesday"; break;
++    case DAY_4: result = "Wednesday"; break;
++    case DAY_5: result = "Thursday"; break;
++    case DAY_6: result = "Friday"; break;
++    case DAY_7: result = "Saturday"; break;
++    case ABDAY_1: result = "Sun"; break;
++    case ABDAY_2: result = "Mon"; break;
++    case ABDAY_3: result = "Tue"; break;
++    case ABDAY_4: result = "Wed"; break;
++    case ABDAY_5: result = "Thu"; break;
++    case ABDAY_6: result = "Fri"; break;
++    case ABDAY_7: result = "Sat"; break;
++    case MON_1: result = "January"; break;
++    case MON_2: result = "February"; break;
++    case MON_3: result = "March"; break;
++    case MON_4: result = "April"; break;
++    case MON_5: result = "May"; break;
++    case MON_6: result = "June"; break;
++    case MON_7: result = "July"; break;
++    case MON_8: result = "August"; break;
++    case MON_9: result = "September"; break;
++    case MON_10: result = "October"; break;
++    case MON_11: result = "November"; break;
++    case MON_12: result = "December"; break;
++    case ABMON_1: result = "Jan"; break;
++    case ABMON_2: result = "Feb"; break;
++    case ABMON_3: result = "Mar"; break;
++    case ABMON_4: result = "Apr"; break;
++    case ABMON_5: result = "May"; break;
++    case ABMON_6: result = "Jun"; break;
++    case ABMON_7: result = "Jul"; break;
++    case ABMON_8: result = "Aug"; break;
++    case ABMON_9: result = "Sep"; break;
++    case ABMON_10: result = "Oct"; break;
++    case ABMON_11: result = "Nov"; break;
++    case ABMON_12: result = "Dec"; break;
++    case ERA: result = ""; break;
++    case ERA_D_FMT: result = ""; break;
++    case ERA_D_T_FMT: result = ""; break;
++    case ERA_T_FMT: result = ""; break;
++    case ALT_DIGITS: result = ""; break;
++    case RADIXCHAR: result = "."; break;
++    case THOUSEP: result = ""; break;
++    case YESEXPR: result = "^[yY]"; break;
++    case NOEXPR: result = "^[nN]"; break;
++    case CRNCYSTR: result = ""; break;
++    default: break;
++  }
++  return (char*) result;
++}
++#endif
++
+ #if defined(_ALLBSD_SOURCE)
+ #if !defined(P_tmpdir)
+ #include <paths.h>
+Index: make/autoconf/toolchain.m4
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/autoconf/toolchain.m4 b/make/autoconf/toolchain.m4
+--- a/make/autoconf/toolchain.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/autoconf/toolchain.m4	(date 1794729069409)
+@@ -38,7 +38,7 @@
+ VALID_TOOLCHAINS_all="gcc clang xlc microsoft"
+ 
+ # These toolchains are valid on different platforms
+-VALID_TOOLCHAINS_linux="gcc clang"
++VALID_TOOLCHAINS_linux="clang gcc"
+ VALID_TOOLCHAINS_macosx="clang"
+ VALID_TOOLCHAINS_aix="xlc clang"
+ VALID_TOOLCHAINS_windows="microsoft"
+@@ -924,8 +924,8 @@
+         UTIL_REQUIRE_PROGS(BUILD_CC, clang)
+         UTIL_REQUIRE_PROGS(BUILD_CXX, clang++)
+       else
+-        UTIL_REQUIRE_PROGS(BUILD_CC, cc gcc)
+-        UTIL_REQUIRE_PROGS(BUILD_CXX, CC g++)
++        UTIL_REQUIRE_PROGS(BUILD_CC, clang gcc)
++        UTIL_REQUIRE_PROGS(BUILD_CXX, clang++ g++)
+       fi
+       UTIL_LOOKUP_PROGS(BUILD_NM, nm gcc-nm)
+       UTIL_LOOKUP_PROGS(BUILD_AR, ar gcc-ar lib)
+@@ -940,11 +940,14 @@
+ 
+     PATH="$OLDPATH"
+ 
+-    TOOLCHAIN_EXTRACT_COMPILER_VERSION(BUILD_CC, [BuildC])
+-    TOOLCHAIN_EXTRACT_COMPILER_VERSION(BUILD_CXX, [BuildC++])
+-    TOOLCHAIN_PREPARE_FOR_VERSION_COMPARISONS([BUILD_], [OPENJDK_BUILD_], [build ])
+-    TOOLCHAIN_EXTRACT_LD_VERSION(BUILD_LD, [build linker])
+-    TOOLCHAIN_PREPARE_FOR_LD_VERSION_COMPARISONS([BUILD_], [OPENJDK_BUILD_])
++    # xandroid
++    if test "x$OPENJDK_BUILD_OS" != "xlinux"; then
++      TOOLCHAIN_EXTRACT_COMPILER_VERSION(BUILD_CC, [BuildC])
++      TOOLCHAIN_EXTRACT_COMPILER_VERSION(BUILD_CXX, [BuildC++])
++      TOOLCHAIN_PREPARE_FOR_VERSION_COMPARISONS([BUILD_], [OPENJDK_BUILD_], [build ])
++      TOOLCHAIN_EXTRACT_LD_VERSION(BUILD_LD, [build linker])
++      TOOLCHAIN_PREPARE_FOR_LD_VERSION_COMPARISONS([BUILD_], [OPENJDK_BUILD_])
++    fi
+   else
+     # If we are not cross compiling, use the normal target compilers for
+     # building the build platform executables.
+Index: src/java.base/unix/native/libnet/net_util_md.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libnet/net_util_md.c b/src/java.base/unix/native/libnet/net_util_md.c
+--- a/src/java.base/unix/native/libnet/net_util_md.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/java.base/unix/native/libnet/net_util_md.c	(date 1794729236232)
+@@ -115,6 +115,7 @@
+     SOCKETADDRESS sa;
+     socklen_t sa_len = sizeof(SOCKETADDRESS);
+ 
++#ifndef __ANDROID__  // ANDROID: skip check, see libcore commit ae218d9b
+     fd = socket(AF_INET6, SOCK_STREAM, 0) ;
+     if (fd < 0) {
+         /*
+@@ -145,6 +146,7 @@
+         }
+     }
+ #endif
++#endif  // !defined __ANDROID__
+ 
+     /*
+      *  OK we may have the stack available in the kernel,
+Index: make/autoconf/flags-cflags.m4
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/autoconf/flags-cflags.m4 b/make/autoconf/flags-cflags.m4
+--- a/make/autoconf/flags-cflags.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/autoconf/flags-cflags.m4	(date 1794788880929)
+@@ -66,13 +66,7 @@
+       SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
+       SET_SHARED_LIBRARY_MAPFILE='-Wl,-version-script=[$]1'
+ 
+-      # arm specific settings
+-      if test "x$OPENJDK_TARGET_CPU" = "xarm"; then
+-        # '-Wl,-z,origin' isn't used on arm.
+-        SET_SHARED_LIBRARY_ORIGIN='-Wl,-rpath,\$$$$ORIGIN[$]1'
+-      else
+-        SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
+-      fi
++      SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
+     fi
+ 
+   elif test "x$TOOLCHAIN_TYPE" = xxlc; then
+@@ -566,7 +560,7 @@
+ 
+   # CFLAGS C language level for JDK sources (hotspot only uses C++)
+   if test "x$TOOLCHAIN_TYPE" = xgcc || test "x$TOOLCHAIN_TYPE" = xclang || test "x$TOOLCHAIN_TYPE" = xxlc; then
+-    LANGSTD_CFLAGS="-std=c11"
++    LANGSTD_CFLAGS=""
+   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
+     LANGSTD_CFLAGS="-std:c11"
+   fi
+Index: src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c b/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c
+--- a/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/java.desktop/unix/native/libawt/awt/awt_LoadLibrary.c	(date 1794729345282)
+@@ -30,6 +30,7 @@
+ #include <jni.h>
+ #include <jni_util.h>
+ #include <jvm.h>
++#include <stdbool.h>
+ #include "gdefs.h"
+ 
+ #include <sys/param.h>
+@@ -98,6 +99,30 @@
+   #define HEADLESS_PATH "/libawt_headless.so"
+ #endif
+ 
++static bool read_so_path_from_maps(const char* so_name, char* buf) {
++  FILE *fp = fopen("/proc/self/maps", "r");
++
++  if (!fp) {
++    return false;
++  }
++
++  char maps_buffer[2048];
++  while (fgets(maps_buffer, 2048, fp) != NULL) {
++    if (strstr(maps_buffer, so_name) == NULL) {
++      continue;
++    }
++
++    char *so_path = strchr(maps_buffer, '/');
++    so_path[strlen(so_path) - 1] = '\0'; // Cut trailing \n
++      strcpy(buf,so_path);
++    fclose(fp);
++    return true;
++  }
++
++  fclose(fp);
++  return false;
++}
++
+ jint
+ AWT_OnLoad(JavaVM *vm, void *reserved)
+ {
+Index: make/hotspot/gensrc/GensrcAdlc.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/hotspot/gensrc/GensrcAdlc.gmk b/make/hotspot/gensrc/GensrcAdlc.gmk
+--- a/make/hotspot/gensrc/GensrcAdlc.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/hotspot/gensrc/GensrcAdlc.gmk	(date 1794729069474)
+@@ -95,6 +95,10 @@
+   # ADLC flags depending on target OS
+   ifeq ($(call isTargetOs, linux), true)
+     ADLCFLAGS += -DLINUX=1 -D_GNU_SOURCE=1
++    # Android: keep C2 off x18 (shadow call stack), matching R18_RESERVED in hotspot
++    ifeq ($(HOTSPOT_TARGET_CPU_ARCH), aarch64)
++      ADLCFLAGS += -DR18_RESERVED
++    endif
+   else ifeq ($(call isTargetOs, aix), true)
+     ADLCFLAGS += -DAIX=1
+   else ifeq ($(call isTargetOs, macosx), true)
+Index: make/autoconf/libraries.m4
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/autoconf/libraries.m4 b/make/autoconf/libraries.m4
+--- a/make/autoconf/libraries.m4	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/autoconf/libraries.m4	(date 1794729048393)
+@@ -42,8 +42,8 @@
+ AC_DEFUN_ONCE([LIB_DETERMINE_DEPENDENCIES],
+ [
+   # Check if X11 is needed
+-  if test "x$OPENJDK_TARGET_OS" = xwindows || test "x$OPENJDK_TARGET_OS" = xmacosx; then
+-    # No X11 support on windows or macosx
++  if test "x$OPENJDK_TARGET_OS" = xwindows || test "x$OPENJDK_TARGET_OS" = xmacosx || test "x$OPENJDK_TARGET_OS" = xandroid; then
++    # No X11 support on windows, macosx or android
+     NEEDS_LIB_X11=false
+   else
+     # All other instances need X11, even if building headless only, libawt still
+@@ -52,8 +52,8 @@
+   fi
+ 
+   # Check if fontconfig is needed
+-  if test "x$OPENJDK_TARGET_OS" = xwindows || test "x$OPENJDK_TARGET_OS" = xmacosx; then
+-    # No fontconfig support on windows or macosx
++  if test "x$OPENJDK_TARGET_OS" = xwindows || test "x$OPENJDK_TARGET_OS" = xmacosx || test "x$OPENJDK_TARGET_OS" = xandroid; then
++    # No fontconfig support on windows, macosx or android
+     NEEDS_LIB_FONTCONFIG=false
+   else
+     # All other instances need fontconfig, even if building headless only,
+@@ -74,12 +74,7 @@
+     NEEDS_LIB_FREETYPE=true
+   fi
+ 
+-  # Check if alsa is needed
+-  if test "x$OPENJDK_TARGET_OS" = xlinux; then
+-    NEEDS_LIB_ALSA=true
+-  else
+-    NEEDS_LIB_ALSA=false
+-  fi
++  NEEDS_LIB_ALSA=false
+ 
+   # Check if ffi is needed
+   if HOTSPOT_CHECK_JVM_VARIANT(zero) || test "x$ENABLE_FALLBACK_LINKER" = "xtrue"; then
+Index: make/hotspot/lib/JvmOverrideFiles.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/hotspot/lib/JvmOverrideFiles.gmk b/make/hotspot/lib/JvmOverrideFiles.gmk
+--- a/make/hotspot/lib/JvmOverrideFiles.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/hotspot/lib/JvmOverrideFiles.gmk	(date 1794729069493)
+@@ -62,7 +62,8 @@
+ 	#
+   endif
+ 
+-  ifeq ($(call isTargetCpu, x86), true)
++  #ifeq ($(call isTargetCpu, x86), true)
++  ifeq (false, true)
+     # Performance measurements show that by compiling GC related code, we could
+     # significantly reduce the GC pause time on 32 bit Linux/Unix platforms by
+     # compiling without the PIC flag (-fPIC on linux).
+Index: make/hotspot/lib/JvmFlags.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/hotspot/lib/JvmFlags.gmk b/make/hotspot/lib/JvmFlags.gmk
+--- a/make/hotspot/lib/JvmFlags.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/hotspot/lib/JvmFlags.gmk	(date 1794729069484)
+@@ -51,6 +51,12 @@
+     -I$(TOPDIR)/src/java.base/share/native/libjimage \
+     #
+ 
++ifeq ($(call isTargetOs, android ios), true)
++  JVM_CFLAGS_INCLUDES += \
++    -I$(TOPDIR)/src/hotspot/os/linux \
++    #
++endif
++
+ # INCLUDE_SUFFIX_* is only meant for including the proper
+ # platform files. Don't use it to guard code. Use the value of
+ # HOTSPOT_TARGET_CPU_DEFINE etc. instead.
+Index: src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c
+--- a/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/src/java.base/unix/native/libnio/fs/UnixNativeDispatcher.c	(date 1794729278083)
+@@ -177,6 +177,41 @@
+ }
+ #endif
+ 
++#ifdef __ANDROID__
++/*
++ * TODO: Android lacks support for the methods listed below.  In it's place are
++ * alternatives that use existing Android functionality, but lack reentrant
++ * support.  Determine if the following are the most suitable alternatives.
++ *
++ */
++int getgrgid_r(gid_t gid, struct group* grp, char* buf, size_t buflen, struct group** result) {
++
++  *result = NULL;
++  errno = 0;
++  grp = getgrgid(gid);
++  if (grp == NULL) {
++        return errno;
++  }
++  // buf not used by caller (see below)
++  *result = grp;
++  return 0;
++}
++
++int getgrnam_r(const char *name, struct group* grp, char* buf, size_t buflen, struct group** result) {
++
++  *result = NULL;
++  errno = 0;
++  grp = getgrnam(name);
++  if (grp == NULL) {
++        return errno;
++  }
++  // buf not used by caller (see below)
++  *result = grp;
++  return 0;
++
++}
++#endif
++
+ /**
+  * Call this to throw an internal UnixException when a system/library
+  * call fails
+@@ -703,8 +738,9 @@
+ {
+     struct timespec times[2];
+     int err = 0;
++    struct timespec times2[2];
+ 
+-    times[0].tv_sec = accessTime / 1000000000;
++    times[0].tv_sec = times2[0].tv_sec = accessTime / 1000000000;
+     times[0].tv_nsec = accessTime % 1000000000;
+ 
+     times[1].tv_sec = modificationTime / 1000000000;
+Index: make/conf/branding.conf
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/conf/branding.conf b/make/conf/branding.conf
+--- a/make/conf/branding.conf	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/conf/branding.conf	(date 1794729069463)
+@@ -25,7 +25,7 @@
+ 
+ LAUNCHER_NAME=openjdk
+ PRODUCT_NAME=OpenJDK
+-PRODUCT_SUFFIX="Runtime Environment"
++PRODUCT_SUFFIX="Android Runtime Environment"
+ JDK_RC_PLATFORM_NAME=Platform
+ COMPANY_NAME=N/A
+ HOTSPOT_VM_DISTRO="OpenJDK"
+Index: make/modules/java.desktop/lib/Awt2dLibraries.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/java.desktop/lib/Awt2dLibraries.gmk b/make/modules/java.desktop/lib/Awt2dLibraries.gmk
+--- a/make/modules/java.desktop/lib/Awt2dLibraries.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/modules/java.desktop/lib/Awt2dLibraries.gmk	(date 1795485952357)
+@@ -542,7 +542,7 @@
+     LDFLAGS_unix := -L$(INSTALL_LIBRARIES_HERE), \
+     LDFLAGS_aix := -Wl$(COMMA)-berok, \
+     LIBS := $(BUILD_LIBFONTMANAGER_FONTLIB), \
+-    LIBS_unix := -lawt -ljava -ljvm $(LIBM) $(LIBCXX), \
++    LIBS_unix := -lawt -lawt_headless -ljava -ljvm $(LIBM) $(LIBCXX), \
+     LIBS_macosx := -lawt_lwawt -framework CoreText -framework CoreFoundation -framework CoreGraphics, \
+     LIBS_windows := $(WIN_JAVA_LIB) advapi32.lib user32.lib gdi32.lib \
+         $(WIN_AWT_LIB), \
+Index: make/modules/java.desktop/Lib.gmk
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/make/modules/java.desktop/Lib.gmk b/make/modules/java.desktop/Lib.gmk
+--- a/make/modules/java.desktop/Lib.gmk	(revision 890adb6410dab4606a4f26a942aed02fb2f55387)
++++ b/make/modules/java.desktop/Lib.gmk	(date 1794729075898)
+@@ -76,7 +76,7 @@
+ 
+   $(BUILD_LIBJSOUND): $(call FindLib, java.base, java)
+ 
+-  TARGETS += $(BUILD_LIBJSOUND)
++  # TARGETS += $(BUILD_LIBJSOUND)
+ 
+ endif
+ 
 Index: src/hotspot/os/linux/os_linux.cpp
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
